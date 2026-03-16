@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#f2f2f7">
   <meta name="apple-mobile-web-app-title" content="AllApp">
   
-  <title>AllApp - Покупки и задачи</title>
+  <title>НАШ ДОМ - Покупки и задачи</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
   
@@ -16,11 +16,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192.png">
 </head>
 <body>
+  <!-- Экран авторизации -->
   <div id="auth-screen" class="screen">
     <div class="auth-container">
       <h2>НАШ ДОМ</h2>
       <p class="auth-subtitle">Войдите, чтобы продолжить</p>
-      
       
       <input type="email" id="email-input" placeholder="Email" autocomplete="email">
       <input type="password" id="password-input" placeholder="Пароль" autocomplete="current-password">
@@ -31,6 +31,7 @@
     </div>
   </div>
 
+  <!-- Основное приложение -->
   <div id="main-app" class="screen hidden">
     <header class="header">
       <h1 id="page-title">Покупки</h1>
@@ -38,10 +39,13 @@
     </header>
 
     <main class="content">
-      <!-- Быстрые продукты (только для покупок) -->
+      <!-- Быстрые продукты (сворачиваемый блок) -->
       <div id="quick-products-container" class="quick-products-section">
-        <h4 class="quick-title">Быстрое добавление:</h4>
-        <div class="quick-grid" id="quick-products">
+        <div class="quick-header" id="quick-toggle">
+          <h4 class="quick-title">Быстрое добавление</h4>
+          <span class="quick-arrow" id="quick-arrow">▼</span>
+        </div>
+        <div class="quick-grid" id="quick-grid">
           <button class="quick-btn" data-product="Творог Савушкин 0,1%">Творог Савушкин 0,1%</button>
           <button class="quick-btn" data-product="Бананы">Бананы</button>
           <button class="quick-btn" data-product="Фарш">Фарш</button>
@@ -61,11 +65,13 @@
         </div>
       </div>
 
+      <!-- Поле ввода и кнопка добавления -->
       <div class="input-group">
         <input type="text" id="item-input" placeholder="Или введите вручную..." autocomplete="off">
         <button id="add-btn">+</button>
       </div>
 
+      <!-- Список -->
       <div class="list-section">
         <h3 id="list-title" class="list-section-title">Список покупок</h3>
         <ul id="items-list"></ul>
@@ -73,6 +79,7 @@
       </div>
     </main>
 
+    <!-- Нижняя навигация -->
     <nav class="bottom-nav">
       <button class="nav-item active" data-tab="shopping">
         <span class="icon">🛒</span>

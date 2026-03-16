@@ -134,8 +134,9 @@ registerBtn.addEventListener('click', async () => {
 
 logoutBtn.addEventListener('click', () => signOut(auth));
 
-function getUserCollection() {
-  return collection(db, 'users', currentUser.uid, currentTab);
+function getCollection() {
+  // Используем общую коллекцию вместо пользовательской
+  return collection(db, 'shared', currentTab);
 }
 
 async function addItem() {

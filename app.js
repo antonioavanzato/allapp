@@ -39,13 +39,11 @@ let currentUser = null;
 
 // Функция для показа уведомления
 function showNotification(title, body) {
-  // Проверяем, поддерживает ли браузер уведомления
   if (!('Notification' in window)) {
     console.log('Браузер не поддерживает уведомления');
     return;
   }
 
-  // Если разрешение уже есть - показываем
   if (Notification.permission === 'granted') {
     new Notification(title, {
       body: body,
@@ -54,7 +52,6 @@ function showNotification(title, body) {
       vibrate: [200, 100, 200]
     });
   } 
-  // Если разрешение не запрашивали - запрашиваем
   else if (Notification.permission !== 'denied') {
     Notification.requestPermission().then(permission => {
       if (permission === 'granted') {
@@ -146,18 +143,16 @@ async function addItem() {
   if (!text || !currentUser) return;
   itemInput.value = '';
   
-  // Добавляем в Firestore
   await addDoc(getUserCollection(), {
     text: text,
     completed: false,
     createdAt: serverTimestamp()
   });
   
-  // ПОКАЗЫВАЕМ УВЕДОМЛЕНИЕ СРАЗУ ПОСЛЕ ДОБАВЛЕНИЯ
   const itemType = currentTab === 'shopping' ? 'покупку' : 'задачу';
   showNotification(
-    '✅ Добавлено в список',
-    `Вы добавили: ${text}`
+    '✅ Добавлено',
+    `${itemType}: ${text}`
   );
 }
 
@@ -217,12 +212,26 @@ function renderItem(id, item) {
     li.classList.remove('is-swiping');
 
     if (translateX > threshold) {
+      // СВАЙП ВПРАВО - ОТМЕТИТЬ КАК ВЫПОЛНЕНО
       const docRef = doc(db, 'users', currentUser.uid, currentTab, id);
-      await updateDoc(docRef, { completed: !item.completed });
+      const newCompletedState = !item.completed;
+      await updateDoc(docRef, { completed: newCompletedState });
+      
+      // ПОКАЗЫВАЕМ УВЕДОМЛЕНИЕ
+      const action = newCompletedState ? '✅ Выполнено' : '↩️ Возвращено';
+      const itemType = currentTab === 'shopping' ? 'покупка' : 'задача';
+      showNotification(action, `${itemType}: ${item.text}`);
+      
     } else if (translateX < -threshold) {
+      // СВАЙП ВЛЕВО - УДАЛИТЬ
       li.style.transition = 'all 0.3s ease';
       li.style.transform = 'translateX(-100%)';
       li.style.opacity = '0';
+      
+      // ПОКАЗЫВАЕМ УВЕДОМЛЕНИЕ ОБ УДАЛЕНИИ
+      const itemType = currentTab === 'shopping' ? 'покупка' : 'задача';
+      showNotification('🗑️ Удалено', `${itemType}: ${item.text}`);
+      
       setTimeout(() => deleteDoc(doc(db, 'users', currentUser.uid, currentTab, id)), 300);
     } else {
       swipeContent.style.transform = 'translateX(0px)';

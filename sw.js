@@ -1,34 +1,29 @@
-const CACHE_NAME = 'allapp-cache-v2';
+const CACHE_NAME = 'allapp-cache-v3';
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
+  './firebase-messaging-sw.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
 
-// Установка service worker и кэширование файлов
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Кэширование файлов...');
-        return cache.addAll(urlsToCache);
-      })
+      .then((cache) => cache.addAll(urlsToCache))
   );
 });
 
-// Активация и очистка старого кэша
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Удаление старого кэша:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -37,34 +32,36 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Стратегия кэширования: сначала кэш, потом сеть
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
-      .then((response) => {
-        // Возвращаем из кэша, если есть
-        if (response) {
-          return response;
-        }
-        
-        // Иначе грузим из сети
-        return fetch(event.request).then(
-          (response) => {
-            // Проверяем валидность ответа
-            if(!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-            
-            // Кэшируем новый ресурс
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-            
-            return response;
-          }
-        );
-      })
+      .then((response) => response || fetch(event.request))
   );
+});
+
+// Обработка push-уведомлений
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  
+  try {
+    const data = event.data.json();
+    const options = {
+      body: data.body || 'Новое обновление в AllApp',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: data.data || {},
+      actions: data.actions || [
+        { action: 'open', title: 'Открыть' }
+      ]
+    };
+    
+    event.waitUntil(
+      self.registration.showNotification(
+        data.title || 'AllApp',
+        options
+      )
+    );
+  } catch (error) {
+    console.error('Ошибка при показе уведомления:', error);
+  }
 });

@@ -97,10 +97,12 @@
           <h3 class="coffee-title">Новый рецепт</h3>
           <input type="text" id="coffee-name" placeholder="Название" class="coffee-input">
           <input type="text" id="coffee-processing" placeholder="Обработка" class="coffee-input">
-          <div class="coffee-row">
-           <input type="date" id="coffee-roast-date" class="coffee-input coffee-date" placeholder="дата обжарки">
-            <span class="coffee-current-date" id="coffee-current-date"></span>
-          </div>
+         <div class="coffee-row">
+  <input type="text" id="coffee-roast-date" class="coffee-input coffee-date" placeholder="дата обжарки" 
+         onfocus="this.type='date'" 
+         onblur="if(!this.value) this.type='text'">
+  <span class="coffee-current-date" id="coffee-current-date"></span>
+</div>
           <input type="number" id="coffee-grind" placeholder="Помол (клики)" class="coffee-input" step="1" min="0">
           <input type="number" id="coffee-temp" placeholder="Температура (°C)" class="coffee-input" step="0.1" min="0">
           <input type="number" id="coffee-water" placeholder="Вода (мл)" class="coffee-input" step="1" min="0">

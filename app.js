@@ -240,8 +240,8 @@ function renderItem(id, item) {
   
   li.innerHTML = `
     <div class="swipe-actions">
-      <div class="action-complete">Готово</div>
-      <div class="action-delete">Удалить</div>
+      <div class="action-complete">✓ Готово</div>
+      <div class="action-delete">🗑️ Удалить</div>
     </div>
     <div class="swipe-content">
       <span class="item-text ${item.completed ? 'completed' : ''}">
@@ -261,21 +261,43 @@ function renderItem(id, item) {
     startX = getX(e);
     isSwiping = true;
     li.classList.add('is-swiping');
+    // Убираем классы направления при старте
+    li.classList.remove('swiping-right', 'swiping-left');
   };
 
   const move = (e) => {
     if (!isSwiping) return;
     currentX = getX(e);
     translateX = currentX - startX;
+    
+    // Ограничение свайпа
     if (translateX > 120) translateX = 120;
     if (translateX < -120) translateX = -120;
-    if (swipeContent) swipeContent.style.transform = `translateX(${translateX}px)`;
+    
+    // Двигаем контент
+    if (swipeContent) {
+      swipeContent.style.transform = `translateX(${translateX}px)`;
+    }
+    
+    // Добавляем цвет в зависимости от направления
+    if (translateX > 20) {
+      li.classList.add('swiping-right');
+      li.classList.remove('swiping-left');
+    } else if (translateX < -20) {
+      li.classList.add('swiping-left');
+      li.classList.remove('swiping-right');
+    } else {
+      li.classList.remove('swiping-right', 'swiping-left');
+    }
   };
 
   const end = async () => {
     if (!isSwiping) return;
     isSwiping = false;
     li.classList.remove('is-swiping');
+    
+    // Убираем цвет
+    li.classList.remove('swiping-right', 'swiping-left');
 
     try {
       if (translateX > threshold) {

@@ -595,3 +595,160 @@ li.swiping-left .swipe-content {
     font-size: 14px;
   }
 }
+
+/* Coffee Section */
+.coffee-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.coffee-form {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coffee-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.coffee-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 16px;
+  background: var(--bg-color);
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.coffee-input:focus {
+  border-color: var(--accent);
+}
+
+.coffee-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.coffee-input[type="number"]::-webkit-outer-spin-button,
+.coffee-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.coffee-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coffee-date {
+  flex: 2;
+}
+
+.coffee-current-date {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-muted);
+  background: var(--bg-color);
+  padding: 10px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.coffee-save-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.2s;
+}
+
+.coffee-save-btn:active {
+  opacity: 0.8;
+}
+
+.coffee-list {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 20px;
+}
+
+#coffee-recipes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coffee-recipe-card {
+  background: var(--bg-color);
+  border-radius: 16px;
+  padding: 16px;
+  position: relative;
+  border: 1px solid var(--border);
+}
+
+.coffee-recipe-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 8px;
+  padding-right: 60px;
+}
+
+.coffee-recipe-detail {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 4px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coffee-recipe-detail span {
+  background: var(--card-bg);
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: var(--text-main);
+}
+
+.coffee-recipe-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.coffee-recipe-delete {
+  background: var(--color-delete);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.coffee-recipe-delete:active {
+  opacity: 0.8;
+}

@@ -759,8 +759,3 @@ li.swiping-left .swipe-content {
     font-size: 14px;
   }
 }
-
-#coffee-roast-date::placeholder {
-  color: var(--text-muted);
-  opacity: 1;
-}

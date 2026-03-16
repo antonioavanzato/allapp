@@ -12,21 +12,10 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
   
-  <!-- Иконки для iOS -->
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-192.png">
-  
-  <!-- Favicon для браузера -->
   <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-192.png">
-  
-  <!-- Meta теги для Android -->
-  <meta name="mobile-web-app-capable" content="yes">
 </head>
 <body>
-  <!-- Экран авторизации -->
   <div id="auth-screen" class="screen">
     <div class="auth-container">
       <h2>AllApp</h2>
@@ -42,7 +31,6 @@
     </div>
   </div>
 
-  <!-- Основное приложение -->
   <div id="main-app" class="screen hidden">
     <header class="header">
       <h1 id="page-title">Покупки</h1>
@@ -78,12 +66,14 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
+        navigator.serviceWorker.register('firebase-messaging-sw.js')
+          .then(registration => {
+            console.log('Firebase ServiceWorker зарегистрирован');
+          });
+          
         navigator.serviceWorker.register('sw.js')
           .then(registration => {
-            console.log('ServiceWorker зарегистрирован:', registration.scope);
-          })
-          .catch(error => {
-            console.log('Ошибка регистрации ServiceWorker:', error);
+            console.log('ServiceWorker зарегистрирован');
           });
       });
     }

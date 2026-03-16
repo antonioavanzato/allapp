@@ -21,7 +21,6 @@
       <h2>AllApp</h2>
       <p class="auth-subtitle">Войдите, чтобы продолжить</p>
       
-      <!-- Поле для имени (будет видно только при регистрации) -->
       <input type="text" id="name-input" placeholder="Ваше имя" autocomplete="name" style="margin-bottom: 10px; display: block;">
       
       <input type="email" id="email-input" placeholder="Email" autocomplete="email">
@@ -41,8 +40,31 @@
     </header>
 
     <main class="content">
+      <!-- Быстрые продукты -->
+      <div class="quick-products-section">
+        <h4 class="quick-title">Быстрое добавление:</h4>
+        <div class="quick-grid" id="quick-products">
+          <button class="quick-btn" data-product="Творог Савушкин 0,1%">Творог Савушкин 0,1%</button>
+          <button class="quick-btn" data-product="Бананы">Бананы</button>
+          <button class="quick-btn" data-product="Фарш">Фарш</button>
+          <button class="quick-btn" data-product="Томаты Фламенко">Томаты Фламенко</button>
+          <button class="quick-btn" data-product="Перетертые томаты">Перетертые томаты</button>
+          <button class="quick-btn" data-product="Яйца">Яйца</button>
+          <button class="quick-btn" data-product="Зелень для салата">Зелень для салата</button>
+          <button class="quick-btn" data-product="Индейка Индилайт">Индейка Индилайт</button>
+          <button class="quick-btn" data-product="Морковь">Морковь</button>
+          <button class="quick-btn" data-product="Морковь по корейски">Морковь по корейски</button>
+          <button class="quick-btn" data-product="Туалетная бумага">Туалетная бумага</button>
+          <button class="quick-btn" data-product="Куриное филе">Куриное филе</button>
+          <button class="quick-btn" data-product="Рис">Рис</button>
+          <button class="quick-btn" data-product="Овсянка №2">Овсянка №2</button>
+          <button class="quick-btn" data-product="Хлеб">Хлеб</button>
+          <button class="quick-btn" data-product="Творожный сыр легкий">Творожный сыр легкий</button>
+        </div>
+      </div>
+
       <div class="input-group">
-        <input type="text" id="item-input" placeholder="Что купить?.." autocomplete="off">
+        <input type="text" id="item-input" placeholder="Или введите вручную..." autocomplete="off">
         <button id="add-btn">+</button>
       </div>
 

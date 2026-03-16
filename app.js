@@ -1,11 +1,12 @@
 // Версия приложения для кэширования
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
-// ВАШ КОНФИГ (ТЕПЕРЬ ПОЛНЫЙ)
+// ВАШ КОНФИГ
 const firebaseConfig = {
   apiKey: "AIzaSyAICtDB0Rie_2W2DAoX0MOJm7kDSbTAEUA",
   authDomain: "allapp-16e47.firebaseapp.com",
@@ -19,11 +20,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const messaging = getMessaging(app);
 
-// ДАЛЬШЕ ВЕСЬ ВАШ КОД ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ
-// ... (весь остальной код из вашего app.js)
-
-// DOM Элементы
+// DOM Элементы (добавляем новые)
 const authScreen = document.getElementById('auth-screen');
 const mainApp = document.getElementById('main-app');
 const emailInput = document.getElementById('email-input');
@@ -39,10 +38,83 @@ const pageTitle = document.getElementById('page-title');
 const navItems = document.querySelectorAll('.nav-item');
 const listTitle = document.getElementById('list-title');
 const emptyState = document.getElementById('empty-state');
+// Новые элементы для уведомлений
+const notificationBell = document.createElement('div');
+notificationBell.className = 'notification-bell hidden';
+notificationBell.innerHTML = '🔔';
+document.querySelector('.header').appendChild(notificationBell);
 
 let currentTab = 'shopping';
 let unsubscribe = null;
 let currentUser = null;
+let notificationPermission = false;
+
+// Запрос разрешения на уведомления при входе
+async function setupNotifications() {
+  if (!('Notification' in window)) {
+    console.log('Браузер не поддерживает уведомления');
+    return;
+  }
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      notificationPermission = true;
+      
+      // Получаем токен устройства
+      const token = await getToken(messaging, {
+        vapidKey: 'YOUR_VAPID_KEY_HERE' // Пока оставьте так, потом добавим
+      });
+      
+      console.log('Токен для уведомлений:', token);
+      
+      // Сохраняем токен в Firestore (если нужно)
+      if (currentUser && token) {
+        // Здесь можно сохранить токен в базу
+        console.log('Токен сохранен для пользователя:', currentUser.uid);
+      }
+    }
+  } catch (error) {
+    console.log('Ошибка при запросе уведомлений:', error);
+  }
+}
+
+// Слушаем уведомления, когда приложение открыто
+onMessage(messaging, (payload) => {
+  console.log('Получено уведомление:', payload);
+  // Показываем уведомление через наш интерфейс
+  showInAppNotification(payload.notification);
+});
+
+// Функция для показа уведомления внутри приложения
+function showInAppNotification(notification) {
+  notificationBell.classList.remove('hidden');
+  notificationBell.textContent = `🔔 ${notification?.title || 'Новое'}`;
+  
+  setTimeout(() => {
+    notificationBell.classList.add('hidden');
+  }, 5000);
+}
+
+// Модифицируем функцию addItem для отправки уведомлений
+async function addItem() {
+  const text = itemInput.value.trim();
+  if (!text || !currentUser) return;
+  itemInput.value = '';
+  
+  // Добавляем элемент в Firestore
+  const docRef = await addDoc(getUserCollection(), {
+    text: text,
+    completed: false,
+    createdAt: serverTimestamp()
+  });
+  
+  // Отправляем уведомление (если есть подписка)
+  if (notificationPermission) {
+    // Здесь мы позже добавим вызов сервера для уведомлений
+    console.log('Новый элемент добавлен:', text);
+  }
+}
 
 // Следим за авторизацией
 onAuthStateChanged(auth, (user) => {
@@ -51,6 +123,7 @@ onAuthStateChanged(auth, (user) => {
     authScreen.classList.add('hidden');
     mainApp.classList.remove('hidden');
     loadData();
+    setupNotifications(); // Запрашиваем разрешение при входе
   } else {
     currentUser = null;
     if (unsubscribe) unsubscribe();
@@ -59,6 +132,9 @@ onAuthStateChanged(auth, (user) => {
     itemsList.innerHTML = '';
   }
 });
+
+// ДАЛЬШЕ ВЕСЬ ОСТАЛЬНОЙ ВАШ КОД БЕЗ ИЗМЕНЕНИЙ
+// ... (loginBtn, registerBtn, logoutBtn, loadData, renderItem, навигация)
 
 // Логика входа
 loginBtn.addEventListener('click', async () => {

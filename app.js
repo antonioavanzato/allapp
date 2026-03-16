@@ -73,7 +73,7 @@ let currentUser = null;
 // Текущий месяц для календаря
 let currentCalendarDate = new Date();
 
-// Массив точек для графика
+// Массив точек для графика (временные, до сохранения)
 let currentPoints = [];
 
 // Словарь имен
@@ -158,7 +158,9 @@ onAuthStateChanged(auth, (user) => {
     currentUser = user;
     authScreen.classList.add('hidden');
     mainApp.classList.remove('hidden');
+    // По умолчанию показываем покупки
     switchTab('shopping');
+    // Запрос уведомлений
     if (Notification.permission === 'default') Notification.requestPermission();
   } else {
     currentUser = null;
@@ -214,12 +216,13 @@ function switchTab(tab) {
     if (calendarContainer) calendarContainer.classList.add('hidden');
     if (coffeeSection) coffeeSection.classList.remove('hidden');
     
+    // Сбросить форму и точки
     resetCoffeeForm();
     loadCoffeeRecipes();
   }
 }
 
-// Загрузка данных списка
+// Загрузка данных списка (shopping / tasks)
 function loadListData() {
   if (unsubscribe) unsubscribe();
   if (!currentUser) return;
@@ -238,7 +241,7 @@ function loadListData() {
   }, error => console.error('Ошибка загрузки:', error));
 }
 
-// Добавление элемента
+// Добавление элемента (для shopping / tasks)
 async function addItem() {
   const text = itemInput?.value.trim();
   if (!text || !currentUser) return;
@@ -284,7 +287,7 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   });
 });
 
-// Отрисовка элемента списка
+// Отрисовка элемента списка (shopping / tasks)
 function renderItem(id, item) {
   if (!itemsList) return;
   const li = document.createElement('li');
@@ -380,7 +383,7 @@ navItems.forEach(nav => {
   });
 });
 
-// Сворачивание блока быстрых продуктов
+// Сворачивание блока быстрых продуктов (по умолчанию свернут)
 const quickToggle = document.getElementById('quick-toggle');
 const quickGrid = document.getElementById('quick-grid');
 const quickArrow = document.getElementById('quick-arrow');
@@ -510,9 +513,8 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-// Отрисовка графика (ПОЛНОСТЬЮ ИСПРАВЛЕНО)
-function drawChart(points) {
-  const canvas = coffeeChartCanvas;
+// Универсальная функция для рисования графика на канвасе
+function drawChart(canvas, points) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const width = canvas.width;
@@ -528,14 +530,17 @@ function drawChart(points) {
     return;
   }
 
+  // Сортируем точки по времени, чтобы график шёл слева направо
+  const sortedPoints = [...points].sort((a, b) => a.time - b.time);
+
   // Отступы для осей
   const margin = { left: 40, top: 20, right: 20, bottom: 30 };
   const graphW = width - margin.left - margin.right;
   const graphH = height - margin.top - margin.bottom;
 
   // Находим максимумы (если все нули, ставим 1)
-  const maxTime = Math.max(...points.map(p => p.time), 1);
-  const maxWater = Math.max(...points.map(p => p.water), 1);
+  const maxTime = Math.max(...sortedPoints.map(p => p.time), 1);
+  const maxWater = Math.max(...sortedPoints.map(p => p.water), 1);
 
   // Рисуем оси
   ctx.strokeStyle = 'var(--text-muted)';
@@ -550,7 +555,7 @@ function drawChart(points) {
   ctx.strokeStyle = 'var(--accent)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  points.forEach((p, i) => {
+  sortedPoints.forEach((p, i) => {
     const x = margin.left + (p.time / maxTime) * graphW;
     const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
     if (i === 0) ctx.moveTo(x, y);
@@ -560,7 +565,7 @@ function drawChart(points) {
 
   // Рисуем точки
   ctx.fillStyle = 'var(--accent)';
-  points.forEach(p => {
+  sortedPoints.forEach(p => {
     const x = margin.left + (p.time / maxTime) * graphW;
     const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
     ctx.beginPath();
@@ -579,17 +584,17 @@ function drawChart(points) {
   ctx.fillText('Вода (мл)', 0, 0);
   ctx.restore();
 
-  // Подписи значений на осях
+  // Подписи значений на осях (0 и максимумы)
+  ctx.font = '9px -apple-system';
   ctx.textAlign = 'right';
   ctx.fillStyle = 'var(--text-muted)';
-  ctx.font = '9px -apple-system';
   ctx.fillText('0', margin.left - 5, height - margin.bottom + 3);
   ctx.fillText(maxWater.toString(), margin.left - 5, margin.top + 5);
   ctx.textAlign = 'center';
   ctx.fillText(maxTime.toString(), width - margin.right + 15, height - margin.bottom + 5);
 }
 
-// Обновление списка точек
+// Обновление списка точек и графика (для нового рецепта)
 function renderPointsList() {
   if (!coffeePointsList) return;
   coffeePointsList.innerHTML = '';
@@ -601,14 +606,14 @@ function renderPointsList() {
       e.stopPropagation();
       currentPoints.splice(index, 1);
       renderPointsList();
-      drawChart(currentPoints);
+      drawChart(coffeeChartCanvas, currentPoints);
     });
     coffeePointsList.appendChild(tag);
   });
-  drawChart(currentPoints);
+  drawChart(coffeeChartCanvas, currentPoints);
 }
 
-// Добавление точки
+// Добавление точки (для нового рецепта)
 addPointBtn.addEventListener('click', () => {
   const time = parseFloat(pointTimeInput.value);
   const water = parseFloat(pointWaterInput.value);
@@ -624,7 +629,7 @@ addPointBtn.addEventListener('click', () => {
   renderPointsList();
 });
 
-// Сброс формы
+// Сброс формы нового рецепта
 function resetCoffeeForm() {
   coffeeName.value = '';
   coffeeProcessing.value = '';
@@ -686,12 +691,15 @@ function loadCoffeeRecipes() {
   }, error => console.error('Ошибка загрузки рецептов:', error));
 }
 
-// Отрисовка карточки рецепта
+// Отрисовка карточки рецепта (с графиком)
 function renderCoffeeRecipe(id, data) {
   const card = document.createElement('div');
   card.className = 'coffee-recipe-card';
   
   const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : 'не указана';
+  
+  // Создаём канвас для графика
+  const canvasId = `chart-${id}`;
   
   card.innerHTML = `
     <div class="coffee-recipe-name">${data.name}</div>
@@ -705,11 +713,9 @@ function renderCoffeeRecipe(id, data) {
       ${data.temp ? `<span>🌡️ ${data.temp}°C</span>` : ''}
       ${data.totalWater ? `<span>💧 ${data.totalWater}мл</span>` : ''}
     </div>
-    ${data.points && data.points.length > 0 ? `
-      <div class="coffee-recipe-detail">
-        <span>📊 Вливания: ${data.points.map(p => `${p.time}с/${p.water}мл`).join(', ')}</span>
-      </div>
-    ` : ''}
+    <div style="margin: 8px 0;">
+      <canvas id="${canvasId}" class="coffee-chart" width="300" height="150"></canvas>
+    </div>
     <div class="coffee-recipe-actions">
       <button class="coffee-recipe-delete" data-id="${id}">🗑️</button>
     </div>
@@ -729,12 +735,27 @@ function renderCoffeeRecipe(id, data) {
   });
   
   coffeeRecipesList.appendChild(card);
+  
+  // Рисуем график для этого рецепта
+  const chartCanvas = document.getElementById(canvasId);
+  if (chartCanvas && data.points && data.points.length > 0) {
+    drawChart(chartCanvas, data.points);
+  } else if (chartCanvas) {
+    // Если точек нет, покажем "Нет данных"
+    const ctx = chartCanvas.getContext('2d');
+    ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+    ctx.font = '12px -apple-system';
+    ctx.fillStyle = 'var(--text-muted)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Нет данных', chartCanvas.width/2, chartCanvas.height/2);
+  }
 }
 
-// Слушатель для обновления возраста
+// Слушатель для обновления возраста при изменении даты
 if (coffeeRoastDate) {
   coffeeRoastDate.addEventListener('change', updateCoffeeAge);
   coffeeRoastDate.addEventListener('blur', updateCoffeeAge);
 }
 
+// Делаем функцию updateCoffeeAge доступной глобально для onblur в HTML
 window.updateCoffeeAge = updateCoffeeAge;

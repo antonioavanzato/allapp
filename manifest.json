@@ -1,46 +1,25 @@
 {
   "name": "AllApp",
   "short_name": "AllApp",
-  "description": "Удобный менеджер покупок и задач",
+  "description": "Удобный менеджер покупок и задач с уведомлениями",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f2f2f7",
   "theme_color": "#007aff",
   "orientation": "portrait",
-  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "screenshots/screenshot1.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "platform": "narrow",
-      "label": "Главный экран AllApp"
-    }
-  ]
+  "gcm_sender_id": "103953800507"
 }

@@ -2,7 +2,6 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <!-- Настройки для iOS и PWA -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,36 +13,53 @@
 </head>
 <body>
 
-  <header class="header">
-    <h1 id="page-title">Задачи</h1>
-  </header>
-
-  <main class="content">
-    <div class="input-group">
-      <input type="text" id="item-input" placeholder="Добавить новую запись..." autocomplete="off">
-      <button id="add-btn">+</button>
+  <!-- Экран авторизации -->
+  <div id="auth-screen" class="screen">
+    <div class="auth-container">
+      <h2>AllApp</h2>
+      <p class="auth-subtitle">Войдите, чтобы продолжить</p>
+      
+      <input type="email" id="email-input" placeholder="Email" autocomplete="email">
+      <input type="password" id="password-input" placeholder="Пароль" autocomplete="current-password">
+      
+      <button id="login-btn" class="primary-btn">Войти</button>
+      <button id="register-btn" class="secondary-btn">Создать аккаунт</button>
+      
+      <p id="auth-error" class="error-text"></p>
     </div>
+  </div>
 
-    <ul id="items-list">
-      <!-- Элементы будут добавляться сюда через JS -->
-    </ul>
-  </main>
+  <!-- Основное приложение (скрыто до авторизации) -->
+  <div id="main-app" class="screen hidden">
+    <header class="header">
+      <h1 id="page-title">Задачи</h1>
+      <button id="logout-btn" class="text-btn">Выйти</button>
+    </header>
 
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-tab="tasks">
-      <span class="icon">✓</span>
-      <span>Задачи</span>
-    </button>
-    <button class="nav-item" data-tab="shopping">
-      <span class="icon">🛒</span>
-      <span>Покупки</span>
-    </button>
-  </nav>
+    <main class="content">
+      <div class="input-group">
+        <input type="text" id="item-input" placeholder="Добавить новую запись..." autocomplete="off">
+        <button id="add-btn">+</button>
+      </div>
 
-  <!-- Подключаем логику как модуль -->
+      <ul id="items-list">
+        <!-- Элементы -->
+      </ul>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="tasks">
+        <span class="icon">✓</span>
+        <span>Задачи</span>
+      </button>
+      <button class="nav-item" data-tab="shopping">
+        <span class="icon">🛒</span>
+        <span>Покупки</span>
+      </button>
+    </nav>
+  </div>
+
   <script type="module" src="app.js"></script>
-  
-  <!-- Регистрация Service Worker для PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');

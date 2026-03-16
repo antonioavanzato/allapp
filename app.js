@@ -39,7 +39,7 @@ const quickContainer = document.getElementById('quick-products-container');
 const inputGroup = document.getElementById('input-group');
 const listSection = document.getElementById('list-section');
 const calendarContainer = document.getElementById('albus-calendar');
-const coffeeSection = document.getElementById('coffee-section'); // Новый раздел
+const coffeeSection = document.getElementById('coffee-section');
 
 // Элементы календаря
 const calendarDays = document.getElementById('calendar-days');
@@ -51,15 +51,18 @@ const nextMonthBtn = document.getElementById('next-month');
 const coffeeName = document.getElementById('coffee-name');
 const coffeeProcessing = document.getElementById('coffee-processing');
 const coffeeRoastDate = document.getElementById('coffee-roast-date');
-const coffeeCurrentDateSpan = document.getElementById('coffee-current-date');
+const coffeeAgeSpan = document.getElementById('coffee-age');
+const coffeeDose = document.getElementById('coffee-dose');
 const coffeeGrind = document.getElementById('coffee-grind');
 const coffeeTemp = document.getElementById('coffee-temp');
 const coffeeWater = document.getElementById('coffee-water');
-const coffeeBloom = document.getElementById('coffee-bloom');
-const coffeeFirstPour = document.getElementById('coffee-first-pour');
-const coffeeSecondPour = document.getElementById('coffee-second-pour');
 const coffeeSaveBtn = document.getElementById('coffee-save');
 const coffeeRecipesList = document.getElementById('coffee-recipes-list');
+const coffeeChartCanvas = document.getElementById('coffee-chart');
+const coffeePointsList = document.getElementById('coffee-points-list');
+const pointTimeInput = document.getElementById('point-time');
+const pointWaterInput = document.getElementById('point-water');
+const addPointBtn = document.getElementById('add-point-btn');
 
 let currentTab = 'shopping';
 let unsubscribe = null;
@@ -69,6 +72,9 @@ let currentUser = null;
 
 // Текущий месяц для календаря
 let currentCalendarDate = new Date();
+
+// Массив точек для графика (временные, до сохранения)
+let currentPoints = [];
 
 // Словарь имен
 const userNames = {
@@ -172,13 +178,11 @@ onAuthStateChanged(auth, (user) => {
 function switchTab(tab) {
   currentTab = tab;
   
-  // Обновление активного класса на кнопках
   navItems.forEach(nav => {
     nav.classList.remove('active');
     if (nav.dataset.tab === tab) nav.classList.add('active');
   });
   
-  // Обновление заголовка
   if (pageTitle) {
     if (tab === 'shopping') pageTitle.textContent = 'Покупки';
     else if (tab === 'tasks') pageTitle.textContent = 'Задачи';
@@ -186,7 +190,6 @@ function switchTab(tab) {
     else if (tab === 'coffee') pageTitle.textContent = 'Кофе';
   }
   
-  // Скрыть/показать соответствующие блоки
   if (tab === 'shopping' || tab === 'tasks') {
     if (quickContainer) quickContainer.style.display = tab === 'shopping' ? 'block' : 'none';
     if (inputGroup) inputGroup.style.display = 'flex';
@@ -213,6 +216,8 @@ function switchTab(tab) {
     if (calendarContainer) calendarContainer.classList.add('hidden');
     if (coffeeSection) coffeeSection.classList.remove('hidden');
     
+    // Сбросить форму и точки
+    resetCoffeeForm();
     loadCoffeeRecipes();
   }
 }
@@ -491,15 +496,127 @@ if (prevMonthBtn && nextMonthBtn) {
 }
 
 // ---------- Кофе: рецепты ----------
-// Отображение текущей даты рядом с датой обжарки
-function updateCurrentDate() {
+
+// Вычисление возраста кофе
+function updateCoffeeAge() {
+  const dateStr = coffeeRoastDate.value;
+  if (!dateStr) {
+    coffeeAgeSpan.textContent = '— дней';
+    return;
+  }
+  const roastDate = new Date(dateStr);
   const today = new Date();
-  const day = String(today.getDate()).padStart(2, '0');
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const year = today.getFullYear();
-  coffeeCurrentDateSpan.textContent = `${day}.${month}.${year}`;
+  // Обнуляем время для корректного сравнения дней
+  roastDate.setHours(0,0,0,0);
+  today.setHours(0,0,0,0);
+  const diffTime = today - roastDate;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
-updateCurrentDate();
+
+// Обновление графика
+function drawChart(points) {
+  if (!coffeeChartCanvas) return;
+  const ctx = coffeeChartCanvas.getContext('2d');
+  const width = coffeeChartCanvas.width;
+  const height = coffeeChartCanvas.height;
+  ctx.clearRect(0, 0, width, height);
+
+  if (!points || points.length === 0) {
+    ctx.font = '12px -apple-system';
+    ctx.fillStyle = 'var(--text-muted)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Нет данных', width/2, height/2);
+    return;
+  }
+
+  // Находим максимумы для масштабирования
+  const maxTime = Math.max(...points.map(p => p.time), 1);
+  const maxWater = Math.max(...points.map(p => p.water), 1);
+
+  // Рисуем оси
+  ctx.strokeStyle = 'var(--text-muted)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(30, 20);
+  ctx.lineTo(30, height - 20);
+  ctx.lineTo(width - 20, height - 20);
+  ctx.stroke();
+
+  // Рисуем точки и линии
+  ctx.strokeStyle = 'var(--accent)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((p, index) => {
+    const x = 30 + (p.time / maxTime) * (width - 60);
+    const y = (height - 20) - (p.water / maxWater) * (height - 40);
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+
+  // Рисуем точки
+  points.forEach(p => {
+    const x = 30 + (p.time / maxTime) * (width - 60);
+    const y = (height - 20) - (p.water / maxWater) * (height - 40);
+    ctx.fillStyle = 'var(--accent)';
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+    ctx.fill();
+  });
+}
+
+// Обновление списка точек
+function renderPointsList() {
+  if (!coffeePointsList) return;
+  coffeePointsList.innerHTML = '';
+  currentPoints.forEach((point, index) => {
+    const tag = document.createElement('span');
+    tag.className = 'coffee-point-tag';
+    tag.innerHTML = `${point.time}с / ${point.water}мл <button class="remove-point" data-index="${index}">✕</button>`;
+    tag.querySelector('.remove-point').addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentPoints.splice(index, 1);
+      renderPointsList();
+      drawChart(currentPoints);
+    });
+    coffeePointsList.appendChild(tag);
+  });
+  drawChart(currentPoints);
+}
+
+// Добавление точки
+addPointBtn.addEventListener('click', () => {
+  const time = parseFloat(pointTimeInput.value);
+  const water = parseFloat(pointWaterInput.value);
+  if (isNaN(time) || isNaN(water) || time < 0 || water < 0) {
+    showToast('Введите корректные значения', 'error');
+    return;
+  }
+  currentPoints.push({ time, water });
+  // Сортируем по времени
+  currentPoints.sort((a, b) => a.time - b.time);
+  pointTimeInput.value = '';
+  pointWaterInput.value = '';
+  renderPointsList();
+});
+
+// Сброс формы
+function resetCoffeeForm() {
+  coffeeName.value = '';
+  coffeeProcessing.value = '';
+  coffeeRoastDate.value = '';
+  coffeeAgeSpan.textContent = '— дней';
+  coffeeDose.value = '';
+  coffeeGrind.value = '';
+  coffeeTemp.value = '';
+  coffeeWater.value = '';
+  currentPoints = [];
+  renderPointsList();
+}
 
 // Сохранение рецепта
 coffeeSaveBtn.addEventListener('click', async () => {
@@ -513,15 +630,13 @@ coffeeSaveBtn.addEventListener('click', async () => {
   
   const recipe = {
     name: name,
-    processing: coffeeProcessing.value.trim(),
-    roastDate: coffeeRoastDate.value,
-    currentDate: new Date().toISOString().split('T')[0],
-    grind: coffeeGrind.value ? Number(coffeeGrind.value) : null,
-    temp: coffeeTemp.value ? Number(coffeeTemp.value) : null,
-    water: coffeeWater.value ? Number(coffeeWater.value) : null,
-    bloom: coffeeBloom.value ? Number(coffeeBloom.value) : null,
-    firstPour: coffeeFirstPour.value ? Number(coffeeFirstPour.value) : null,
-    secondPour: coffeeSecondPour.value ? Number(coffeeSecondPour.value) : null,
+    processing: coffeeProcessing.value.trim() || null,
+    roastDate: coffeeRoastDate.value || null,
+    dose: coffeeDose.value ? parseFloat(coffeeDose.value) : null,
+    grind: coffeeGrind.value ? parseInt(coffeeGrind.value) : null,
+    temp: coffeeTemp.value ? parseFloat(coffeeTemp.value) : null,
+    totalWater: coffeeWater.value ? parseInt(coffeeWater.value) : null,
+    points: currentPoints, // массив { time, water }
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
   };
@@ -529,16 +644,7 @@ coffeeSaveBtn.addEventListener('click', async () => {
   try {
     await addDoc(collection(db, 'family', 'shared', 'coffee'), recipe);
     showToast('Рецепт сохранён');
-    // Очистить форму
-    coffeeName.value = '';
-    coffeeProcessing.value = '';
-    coffeeRoastDate.value = '';
-    coffeeGrind.value = '';
-    coffeeTemp.value = '';
-    coffeeWater.value = '';
-    coffeeBloom.value = '';
-    coffeeFirstPour.value = '';
-    coffeeSecondPour.value = '';
+    resetCoffeeForm();
   } catch (error) {
     console.error('Ошибка сохранения рецепта:', error);
     showToast('Ошибка', 'error');
@@ -565,26 +671,25 @@ function renderCoffeeRecipe(id, data) {
   const card = document.createElement('div');
   card.className = 'coffee-recipe-card';
   
-  const dateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : 'не указана';
-  const currentDateStr = data.currentDate ? new Date(data.currentDate).toLocaleDateString('ru-RU') : '';
+  const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : 'не указана';
   
   card.innerHTML = `
     <div class="coffee-recipe-name">${data.name}</div>
     <div class="coffee-recipe-detail">
       ${data.processing ? `<span>🌱 ${data.processing}</span>` : ''}
-      ${data.roastDate ? `<span>🔥 Обжарка: ${dateStr}</span>` : ''}
-      ${currentDateStr ? `<span>📅 Сегодня: ${currentDateStr}</span>` : ''}
+      ${data.roastDate ? `<span>🔥 Обжарка: ${roastDateStr}</span>` : ''}
+      ${data.dose ? `<span>⚖️ ${data.dose}г</span>` : ''}
     </div>
     <div class="coffee-recipe-detail">
       ${data.grind ? `<span>⚙️ Помол: ${data.grind}</span>` : ''}
       ${data.temp ? `<span>🌡️ ${data.temp}°C</span>` : ''}
-      ${data.water ? `<span>💧 ${data.water}мл</span>` : ''}
+      ${data.totalWater ? `<span>💧 ${data.totalWater}мл</span>` : ''}
     </div>
-    <div class="coffee-recipe-detail">
-      ${data.bloom ? `<span>⏳ Блум: ${data.bloom}с</span>` : ''}
-      ${data.firstPour ? `<span>🥤 Первый: ${data.firstPour}с</span>` : ''}
-      ${data.secondPour ? `<span>🥤 Второй: ${data.secondPour}с</span>` : ''}
-    </div>
+    ${data.points && data.points.length > 0 ? `
+      <div class="coffee-recipe-detail">
+        <span>📊 Вливания: ${data.points.map(p => `${p.time}с/${p.water}мл`).join(', ')}</span>
+      </div>
+    ` : ''}
     <div class="coffee-recipe-actions">
       <button class="coffee-recipe-delete" data-id="${id}">🗑️</button>
     </div>
@@ -605,3 +710,12 @@ function renderCoffeeRecipe(id, data) {
   
   coffeeRecipesList.appendChild(card);
 }
+
+// Слушатель для обновления возраста при изменении даты
+if (coffeeRoastDate) {
+  coffeeRoastDate.addEventListener('change', updateCoffeeAge);
+  coffeeRoastDate.addEventListener('blur', updateCoffeeAge);
+}
+
+// Делаем функцию updateCoffeeAge доступной глобально для onblur в HTML
+window.updateCoffeeAge = updateCoffeeAge;

@@ -37,8 +37,38 @@ let currentTab = 'shopping';
 let unsubscribe = null;
 let currentUser = null;
 
-// Функция для уведомлений - ОДИН РАЗ
-const setupNotifications = async () => {
+// Функция для показа уведомления
+function showNotification(title, body) {
+  // Проверяем, поддерживает ли браузер уведомления
+  if (!('Notification' in window)) {
+    console.log('Браузер не поддерживает уведомления');
+    return;
+  }
+
+  // Если разрешение уже есть - показываем
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      body: body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      vibrate: [200, 100, 200]
+    });
+  } 
+  // Если разрешение не запрашивали - запрашиваем
+  else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        new Notification(title, {
+          body: body,
+          icon: '/icons/icon-192.png'
+        });
+      }
+    });
+  }
+}
+
+// Настройка уведомлений через Firebase
+const setupFirebaseNotifications = async () => {
   if (!('Notification' in window)) return;
   
   try {
@@ -62,15 +92,13 @@ const setupNotifications = async () => {
   }
 };
 
-// Слушаем уведомления
+// Слушаем входящие уведомления от Firebase
 onMessage(messaging, (payload) => {
-  console.log('Уведомление:', payload);
-  if (Notification.permission === 'granted') {
-    new Notification(payload.notification?.title || 'AllApp', {
-      body: payload.notification?.body || '',
-      icon: '/icons/icon-192.png'
-    });
-  }
+  console.log('Получено уведомление от Firebase:', payload);
+  showNotification(
+    payload.notification?.title || 'AllApp',
+    payload.notification?.body || ''
+  );
 });
 
 onAuthStateChanged(auth, (user) => {
@@ -79,7 +107,7 @@ onAuthStateChanged(auth, (user) => {
     authScreen.classList.add('hidden');
     mainApp.classList.remove('hidden');
     loadData();
-    setupNotifications();
+    setupFirebaseNotifications();
   } else {
     currentUser = null;
     if (unsubscribe) unsubscribe();
@@ -117,11 +145,20 @@ async function addItem() {
   const text = itemInput.value.trim();
   if (!text || !currentUser) return;
   itemInput.value = '';
+  
+  // Добавляем в Firestore
   await addDoc(getUserCollection(), {
     text: text,
     completed: false,
     createdAt: serverTimestamp()
   });
+  
+  // ПОКАЗЫВАЕМ УВЕДОМЛЕНИЕ СРАЗУ ПОСЛЕ ДОБАВЛЕНИЯ
+  const itemType = currentTab === 'shopping' ? 'покупку' : 'задачу';
+  showNotification(
+    '✅ Добавлено в список',
+    `Вы добавили: ${text}`
+  );
 }
 
 addBtn.addEventListener('click', addItem);

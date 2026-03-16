@@ -95,22 +95,43 @@
       <div id="coffee-section" class="coffee-container hidden">
         <div class="coffee-form">
           <h3 class="coffee-title">Новый рецепт</h3>
+          
           <input type="text" id="coffee-name" placeholder="Название" class="coffee-input">
           <input type="text" id="coffee-processing" placeholder="Обработка" class="coffee-input">
-         <div class="coffee-row">
-  <input type="text" id="coffee-roast-date" class="coffee-input coffee-date" placeholder="дата обжарки" 
-         onfocus="this.type='date'" 
-         onblur="if(!this.value) this.type='text'">
-  <span class="coffee-current-date" id="coffee-current-date"></span>
-</div>
+          
+          <!-- Дата обжарки + возраст -->
+          <div class="coffee-row">
+            <input type="text" id="coffee-roast-date" class="coffee-input coffee-date" placeholder="дата обжарки" 
+                   onfocus="this.type='date'" 
+                   onblur="if(!this.value) this.type='text'; window.updateCoffeeAge?.()">
+            <span class="coffee-age" id="coffee-age">— дней</span>
+          </div>
+          
+          <!-- Дозировка (граммы) -->
+          <input type="number" id="coffee-dose" placeholder="Дозировка (г)" class="coffee-input" step="0.1" min="0">
+          
+          <!-- Помол, температура, общая вода -->
           <input type="number" id="coffee-grind" placeholder="Помол (клики)" class="coffee-input" step="1" min="0">
           <input type="number" id="coffee-temp" placeholder="Температура (°C)" class="coffee-input" step="0.1" min="0">
-          <input type="number" id="coffee-water" placeholder="Вода (мл)" class="coffee-input" step="1" min="0">
-          <input type="number" id="coffee-bloom" placeholder="Блум (сек)" class="coffee-input" step="1" min="0">
-          <input type="number" id="coffee-first-pour" placeholder="Первый пролив (сек)" class="coffee-input" step="1" min="0">
-          <input type="number" id="coffee-second-pour" placeholder="Второй пролив (сек)" class="coffee-input" step="1" min="0">
+          <input type="number" id="coffee-water" placeholder="Общая вода (мл)" class="coffee-input" step="1" min="0">
+          
+          <!-- График вливаний -->
+          <div class="coffee-chart-container">
+            <h4 class="coffee-chart-title">График вливаний</h4>
+            <canvas id="coffee-chart" class="coffee-chart" width="300" height="200"></canvas>
+            <div class="coffee-points" id="coffee-points-list">
+              <!-- Список точек будет добавляться сюда -->
+            </div>
+            <div class="coffee-add-point">
+              <input type="number" id="point-time" placeholder="Время (сек)" class="coffee-input small" step="1" min="0">
+              <input type="number" id="point-water" placeholder="Вода (мл)" class="coffee-input small" step="1" min="0">
+              <button id="add-point-btn" class="coffee-small-btn">+</button>
+            </div>
+          </div>
+          
           <button id="coffee-save" class="coffee-save-btn">Сохранить рецепт</button>
         </div>
+        
         <div class="coffee-list">
           <h3 class="coffee-title">Сохранённые рецепты</h3>
           <div id="coffee-recipes-list"></div>

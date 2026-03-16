@@ -81,3 +81,15 @@ li:not(.is-swiping) .swipe-content { transition: transform 0.3s ease; }
   font-size: 14px;
   z-index: 1000;
 }
+.user-name {
+  color: #8e8e93;
+  font-size: 14px;
+  margin-left: 6px;
+  font-weight: normal;
+}
+
+.item-text {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}

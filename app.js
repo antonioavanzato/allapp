@@ -506,7 +506,6 @@ function updateCoffeeAge() {
   }
   const roastDate = new Date(dateStr);
   const today = new Date();
-  // Обнуляем время для корректного сравнения дней
   roastDate.setHours(0,0,0,0);
   today.setHours(0,0,0,0);
   const diffTime = today - roastDate;
@@ -514,7 +513,7 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-// Обновление графика
+// Обновление графика с подписями осей
 function drawChart(points) {
   if (!coffeeChartCanvas) return;
   const ctx = coffeeChartCanvas.getContext('2d');
@@ -530,6 +529,11 @@ function drawChart(points) {
     return;
   }
 
+  // Отступы для осей и подписей
+  const padding = { top: 20, bottom: 30, left: 40, right: 20 };
+  const graphWidth = width - padding.left - padding.right;
+  const graphHeight = height - padding.top - padding.bottom;
+
   // Находим максимумы для масштабирования
   const maxTime = Math.max(...points.map(p => p.time), 1);
   const maxWater = Math.max(...points.map(p => p.water), 1);
@@ -538,9 +542,9 @@ function drawChart(points) {
   ctx.strokeStyle = 'var(--text-muted)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(30, 20);
-  ctx.lineTo(30, height - 20);
-  ctx.lineTo(width - 20, height - 20);
+  ctx.moveTo(padding.left, padding.top);
+  ctx.lineTo(padding.left, height - padding.bottom);
+  ctx.lineTo(width - padding.right, height - padding.bottom);
   ctx.stroke();
 
   // Рисуем точки и линии
@@ -548,8 +552,8 @@ function drawChart(points) {
   ctx.lineWidth = 2;
   ctx.beginPath();
   points.forEach((p, index) => {
-    const x = 30 + (p.time / maxTime) * (width - 60);
-    const y = (height - 20) - (p.water / maxWater) * (height - 40);
+    const x = padding.left + (p.time / maxTime) * graphWidth;
+    const y = (height - padding.bottom) - (p.water / maxWater) * graphHeight;
     if (index === 0) {
       ctx.moveTo(x, y);
     } else {
@@ -560,13 +564,31 @@ function drawChart(points) {
 
   // Рисуем точки
   points.forEach(p => {
-    const x = 30 + (p.time / maxTime) * (width - 60);
-    const y = (height - 20) - (p.water / maxWater) * (height - 40);
+    const x = padding.left + (p.time / maxTime) * graphWidth;
+    const y = (height - padding.bottom) - (p.water / maxWater) * graphHeight;
     ctx.fillStyle = 'var(--accent)';
     ctx.beginPath();
     ctx.arc(x, y, 4, 0, 2 * Math.PI);
     ctx.fill();
   });
+
+  // Подписи осей
+  ctx.font = '10px -apple-system';
+  ctx.fillStyle = 'var(--text-muted)';
+  ctx.textAlign = 'center';
+  ctx.fillText('Время (сек)', width/2, height - 5);
+  ctx.save();
+  ctx.translate(15, height/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('Вода (мл)', 0, 0);
+  ctx.restore();
+
+  // Подписи значений на осях (опционально)
+  ctx.textAlign = 'right';
+  ctx.fillText('0', padding.left - 5, height - padding.bottom + 15);
+  ctx.fillText(maxWater.toString(), padding.left - 5, padding.top + 5);
+  ctx.textAlign = 'center';
+  ctx.fillText(maxTime.toString(), width - padding.right + 15, height - padding.bottom + 5);
 }
 
 // Обновление списка точек
@@ -597,7 +619,7 @@ addPointBtn.addEventListener('click', () => {
     return;
   }
   currentPoints.push({ time, water });
-  // Сортируем по времени
+  // Сортируем по времени (по возрастанию)
   currentPoints.sort((a, b) => a.time - b.time);
   pointTimeInput.value = '';
   pointWaterInput.value = '';

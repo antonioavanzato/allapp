@@ -41,7 +41,7 @@ let currentUser = null;
 // Словарь для преобразования email в имена
 const userNames = {
   'antonioavanzato@gmail.com': 'Антон',
-  'style_of_live@gmail.com': 'Алина'
+  'style_of_live@gmail.com': 'Дашаа'
 };
 
 // Показываем/скрываем поле имени

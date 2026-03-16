@@ -63,7 +63,7 @@ async function setupNotifications() {
       
       // Получаем токен устройства
       const token = await getToken(messaging, {
-        vapidKey: 'YOUR_VAPID_KEY_HERE' // Пока оставьте так, потом добавим
+        vapidKey: 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q' // Пока оставьте так, потом добавим
       });
       
       console.log('Токен для уведомлений:', token);

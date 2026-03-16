@@ -1,3 +1,6 @@
+// Версия приложения для кэширования
+const APP_VERSION = '1.0.0';
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -16,6 +19,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// ДАЛЬШЕ ВЕСЬ ВАШ КОД ОСТАЕТСЯ БЕЗ ИЗМЕНЕНИЙ
+// ... (весь остальной код из вашего app.js)
 
 // DOM Элементы
 const authScreen = document.getElementById('auth-screen');

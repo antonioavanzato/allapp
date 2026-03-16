@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
@@ -51,16 +51,6 @@ function showNotification(title, body) {
       badge: '/icons/icon-192.png',
       vibrate: [200, 100, 200]
     });
-  } 
-  else if (Notification.permission !== 'denied') {
-    Notification.requestPermission().then(permission => {
-      if (permission === 'granted') {
-        new Notification(title, {
-          body: body,
-          icon: '/icons/icon-192.png'
-        });
-      }
-    });
   }
 }
 
@@ -104,7 +94,8 @@ onAuthStateChanged(auth, (user) => {
     authScreen.classList.add('hidden');
     mainApp.classList.remove('hidden');
     loadData();
-    setupFirebaseNotifications();
+    // Запрашиваем уведомления после входа
+    setTimeout(() => setupFirebaseNotifications(), 1000);
   } else {
     currentUser = null;
     if (unsubscribe) unsubscribe();
@@ -134,11 +125,11 @@ registerBtn.addEventListener('click', async () => {
 
 logoutBtn.addEventListener('click', () => signOut(auth));
 
-// ========== ИЗМЕНЕННАЯ ЧАСТЬ ==========
+// ========== ИСПРАВЛЕННАЯ ЧАСТЬ ==========
 // Функция для получения ссылки на общую коллекцию
 function getFamilyCollection() {
-  // Используем общую папку 'family' вместо личной 'users/uid'
-  return collection(db, 'family', currentTab);
+  // Правильный путь: коллекция 'family' → документ 'shared' → коллекция currentTab
+  return collection(db, 'family', 'shared', currentTab);
 }
 
 async function addItem() {
@@ -147,13 +138,12 @@ async function addItem() {
   itemInput.value = '';
   
   try {
-    // Добавляем в общую папку family
     await addDoc(getFamilyCollection(), {
       text: text,
       completed: false,
       createdAt: serverTimestamp(),
       createdBy: currentUser.email,
-      createdByName: currentUser.email.split('@')[0] // Имя пользователя
+      createdByName: currentUser.email.split('@')[0]
     });
     
     showNotification('✅ Добавлено', `${text}`);
@@ -170,7 +160,6 @@ function loadData() {
   if (unsubscribe) unsubscribe();
   
   try {
-    // Загружаем из общей папки family
     const q = query(getFamilyCollection(), orderBy('createdAt', 'desc'));
     
     unsubscribe = onSnapshot(q, (snapshot) => {
@@ -195,7 +184,6 @@ function loadData() {
 function renderItem(id, item) {
   const li = document.createElement('li');
   
-  // Добавляем информацию о том, кто добавил
   const userInfo = item.createdByName ? ` (${item.createdByName})` : '';
   
   li.innerHTML = `
@@ -236,8 +224,8 @@ function renderItem(id, item) {
 
     try {
       if (translateX > threshold) {
-        // СВАЙП ВПРАВО - ВЫПОЛНЕНО
-        const docRef = doc(db, 'family', currentTab, id);
+        // СВАЙП ВПРАВО
+        const docRef = doc(db, 'family', 'shared', currentTab, id);
         await updateDoc(docRef, { 
           completed: !item.completed 
         });
@@ -248,7 +236,7 @@ function renderItem(id, item) {
         );
         
       } else if (translateX < -threshold) {
-        // СВАЙП ВЛЕВО - УДАЛИТЬ
+        // СВАЙП ВЛЕВО
         li.style.transition = 'all 0.3s ease';
         li.style.transform = 'translateX(-100%)';
         li.style.opacity = '0';
@@ -256,7 +244,7 @@ function renderItem(id, item) {
         showNotification('🗑️ Удалено', item.text);
         
         setTimeout(async () => {
-          await deleteDoc(doc(db, 'family', currentTab, id));
+          await deleteDoc(doc(db, 'family', 'shared', currentTab, id));
         }, 300);
       } else {
         swipeContent.style.transform = 'translateX(0px)';
@@ -290,3 +278,38 @@ navItems.forEach(nav => {
     if (currentUser) loadData();
   });
 });
+
+// Функция для миграции (можно вызвать из консоли)
+window.migrateToFamily = async function() {
+  const user = auth.currentUser;
+  if (!user) {
+    console.log('Сначала войдите в приложение');
+    return;
+  }
+  
+  try {
+    // Переносим покупки
+    const shoppingSnap = await getDocs(collection(db, 'users', user.uid, 'shopping'));
+    for (const docItem of shoppingSnap.docs) {
+      await setDoc(doc(db, 'family', 'shared', 'shopping', docItem.id), {
+        ...docItem.data(),
+        createdBy: user.email,
+        createdByName: user.email.split('@')[0]
+      });
+    }
+    
+    // Переносим задачи
+    const tasksSnap = await getDocs(collection(db, 'users', user.uid, 'tasks'));
+    for (const docItem of tasksSnap.docs) {
+      await setDoc(doc(db, 'family', 'shared', 'tasks', docItem.id), {
+        ...docItem.data(),
+        createdBy: user.email,
+        createdByName: user.email.split('@')[0]
+      });
+    }
+    
+    console.log('✅ Данные перенесены!');
+  } catch (error) {
+    console.error('Ошибка при миграции:', error);
+  }
+};

@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#f2f2f7">
   <meta name="apple-mobile-web-app-title" content="НАШ ДОМ">
   
-  <title>НАШ ДОМ - Покупки, задачи, Альбус</title>
+  <title>НАШ ДОМ - Покупки, задачи, Альбус, Кофе</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
   
@@ -90,6 +90,30 @@
         </div>
         <div class="calendar-days" id="calendar-days"></div>
       </div>
+
+      <!-- Раздел Кофе: рецепты -->
+      <div id="coffee-section" class="coffee-container hidden">
+        <div class="coffee-form">
+          <h3 class="coffee-title">Новый рецепт</h3>
+          <input type="text" id="coffee-name" placeholder="Название" class="coffee-input">
+          <input type="text" id="coffee-processing" placeholder="Обработка" class="coffee-input">
+          <div class="coffee-row">
+            <input type="date" id="coffee-roast-date" class="coffee-input coffee-date">
+            <span class="coffee-current-date" id="coffee-current-date"></span>
+          </div>
+          <input type="number" id="coffee-grind" placeholder="Помол (клики)" class="coffee-input" step="1" min="0">
+          <input type="number" id="coffee-temp" placeholder="Температура (°C)" class="coffee-input" step="0.1" min="0">
+          <input type="number" id="coffee-water" placeholder="Вода (мл)" class="coffee-input" step="1" min="0">
+          <input type="number" id="coffee-bloom" placeholder="Блум (сек)" class="coffee-input" step="1" min="0">
+          <input type="number" id="coffee-first-pour" placeholder="Первый пролив (сек)" class="coffee-input" step="1" min="0">
+          <input type="number" id="coffee-second-pour" placeholder="Второй пролив (сек)" class="coffee-input" step="1" min="0">
+          <button id="coffee-save" class="coffee-save-btn">Сохранить рецепт</button>
+        </div>
+        <div class="coffee-list">
+          <h3 class="coffee-title">Сохранённые рецепты</h3>
+          <div id="coffee-recipes-list"></div>
+        </div>
+      </div>
     </main>
 
     <!-- Нижняя навигация -->
@@ -101,6 +125,10 @@
       <button class="nav-item" data-tab="albus">
         <span class="icon">🐱</span>
         <span>Альбус</span>
+      </button>
+      <button class="nav-item" data-tab="coffee">
+        <span class="icon">☕</span>
+        <span>Кофе</span>
       </button>
       <button class="nav-item" data-tab="tasks">
         <span class="icon">✓</span>

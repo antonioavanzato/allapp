@@ -1,9 +1,13 @@
-// Импорт нужных функций Firebase из CDN
+// Импорт нужных функций Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   getFirestore, collection, addDoc, onSnapshot, 
   doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
+  signOut, onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // Ваша конфигурация
 const firebaseConfig = {
@@ -18,23 +22,92 @@ const firebaseConfig = {
 // Инициализация
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 // DOM Элементы
+const authScreen = document.getElementById('auth-screen');
+const mainApp = document.getElementById('main-app');
+const emailInput = document.getElementById('email-input');
+const passwordInput = document.getElementById('password-input');
+const loginBtn = document.getElementById('login-btn');
+const registerBtn = document.getElementById('register-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const authError = document.getElementById('auth-error');
+
 const itemsList = document.getElementById('items-list');
 const itemInput = document.getElementById('item-input');
 const addBtn = document.getElementById('add-btn');
 const pageTitle = document.getElementById('page-title');
 const navItems = document.querySelectorAll('.nav-item');
 
-// Текущая категория (tasks или shopping)
+// Глобальные переменные состояния
 let currentTab = 'tasks';
-let unsubscribe = null; // Для отписки от слушателя БД при смене вкладки
+let unsubscribe = null;
+let currentUser = null;
 
-// Функция загрузки данных из Firestore в реальном времени
+// ==========================================
+// АВТОРИЗАЦИЯ
+// ==========================================
+
+// Отслеживание состояния пользователя (Вошел / Вышел)
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // Пользователь авторизован
+    currentUser = user;
+    authScreen.classList.add('hidden');
+    mainApp.classList.remove('hidden');
+    loadData(); // Загружаем данные пользователя
+  } else {
+    // Пользователь не авторизован
+    currentUser = null;
+    if (unsubscribe) unsubscribe(); // Отключаем прослушку БД
+    mainApp.classList.add('hidden');
+    authScreen.classList.remove('hidden');
+    itemsList.innerHTML = ''; // Очищаем список
+  }
+});
+
+// Вход
+loginBtn.addEventListener('click', async () => {
+  try {
+    authError.textContent = '';
+    await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    emailInput.value = ''; passwordInput.value = '';
+  } catch (error) {
+    authError.textContent = 'Ошибка входа: неверный email или пароль.';
+  }
+});
+
+// Регистрация
+registerBtn.addEventListener('click', async () => {
+  try {
+    authError.textContent = '';
+    await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+    emailInput.value = ''; passwordInput.value = '';
+  } catch (error) {
+    authError.textContent = 'Ошибка: пароль слишком простой или email занят.';
+  }
+});
+
+// Выход
+logoutBtn.addEventListener('click', () => {
+  signOut(auth);
+});
+
+// ==========================================
+// БАЗА ДАННЫХ И ИНТЕРФЕЙС
+// ==========================================
+
+// Формируем путь к личным данным пользователя: users/ID_ПОЛЬЗОВАТЕЛЯ/tasks
+function getUserCollection() {
+  return collection(db, 'users', currentUser.uid, currentTab);
+}
+
+// Загрузка данных из Firestore
 function loadData() {
-  if (unsubscribe) unsubscribe(); // Очищаем предыдущий слушатель
+  if (unsubscribe) unsubscribe(); 
 
-  const q = query(collection(db, currentTab), orderBy('createdAt', 'desc'));
+  const q = query(getUserCollection(), orderBy('createdAt', 'desc'));
   
   unsubscribe = onSnapshot(q, (snapshot) => {
     itemsList.innerHTML = '';
@@ -45,25 +118,25 @@ function loadData() {
   });
 }
 
-// Отрисовка элемента в HTML
+// Отрисовка элемента
 function renderItem(id, item) {
   const li = document.createElement('li');
   
   li.innerHTML = `
-    <div class="checkbox ${item.completed ? 'checked' : ''}" data-id="${id}"></div>
+    <div class="checkbox ${item.completed ? 'checked' : ''}"></div>
     <span class="item-text ${item.completed ? 'completed' : ''}">${item.text}</span>
-    <button class="delete-btn" data-id="${id}">×</button>
+    <button class="delete-btn">×</button>
   `;
 
-  // Обработчик выполнения
-  li.querySelector('.checkbox').addEventListener('click', async (e) => {
-    const docRef = doc(db, currentTab, id);
+  // Клик по чекбоксу
+  li.querySelector('.checkbox').addEventListener('click', async () => {
+    const docRef = doc(db, 'users', currentUser.uid, currentTab, id);
     await updateDoc(docRef, { completed: !item.completed });
   });
 
-  // Обработчик удаления
-  li.querySelector('.delete-btn').addEventListener('click', async (e) => {
-    const docRef = doc(db, currentTab, id);
+  // Клик по удалению
+  li.querySelector('.delete-btn').addEventListener('click', async () => {
+    const docRef = doc(db, 'users', currentUser.uid, currentTab, id);
     await deleteDoc(docRef);
   });
 
@@ -73,11 +146,11 @@ function renderItem(id, item) {
 // Добавление новой записи
 async function addItem() {
   const text = itemInput.value.trim();
-  if (!text) return;
+  if (!text || !currentUser) return;
 
-  itemInput.value = ''; // очищаем поле
+  itemInput.value = ''; 
   
-  await addDoc(collection(db, currentTab), {
+  await addDoc(getUserCollection(), {
     text: text,
     completed: false,
     createdAt: serverTimestamp()
@@ -89,7 +162,7 @@ itemInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') addItem();
 });
 
-// Переключение вкладок
+// Переключение вкладок (Задачи / Покупки)
 navItems.forEach(nav => {
   nav.addEventListener('click', () => {
     navItems.forEach(n => n.classList.remove('active'));
@@ -97,7 +170,6 @@ navItems.forEach(nav => {
     
     currentTab = nav.dataset.tab;
     
-    // Меняем заголовок и плейсхолдер
     if (currentTab === 'tasks') {
       pageTitle.textContent = 'Задачи';
       itemInput.placeholder = 'Добавить задачу...';
@@ -106,9 +178,6 @@ navItems.forEach(nav => {
       itemInput.placeholder = 'Добавить покупку...';
     }
 
-    loadData(); // Загружаем данные новой вкладки
+    if (currentUser) loadData(); 
   });
 });
-
-// Первоначальная загрузка
-loadData();

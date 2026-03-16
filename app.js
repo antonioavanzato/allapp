@@ -134,8 +134,10 @@ registerBtn.addEventListener('click', async () => {
 
 logoutBtn.addEventListener('click', () => signOut(auth));
 
-function getCollection() {
-  // Используем общую семейную папку вместо личной
+// ========== ИЗМЕНЕННАЯ ЧАСТЬ ==========
+// Функция для получения ссылки на общую коллекцию
+function getFamilyCollection() {
+  // Используем общую папку 'family' вместо личной 'users/uid'
   return collection(db, 'family', currentTab);
 }
 
@@ -144,17 +146,21 @@ async function addItem() {
   if (!text || !currentUser) return;
   itemInput.value = '';
   
-  await addDoc(getUserCollection(), {
-    text: text,
-    completed: false,
-    createdAt: serverTimestamp()
-  });
-  
-  const itemType = currentTab === 'shopping' ? 'покупку' : 'задачу';
-  showNotification(
-    '✅ Добавлено',
-    `${itemType}: ${text}`
-  );
+  try {
+    // Добавляем в общую папку family
+    await addDoc(getFamilyCollection(), {
+      text: text,
+      completed: false,
+      createdAt: serverTimestamp(),
+      createdBy: currentUser.email,
+      createdByName: currentUser.email.split('@')[0] // Имя пользователя
+    });
+    
+    showNotification('✅ Добавлено', `${text}`);
+  } catch (error) {
+    console.error('Ошибка при добавлении:', error);
+    showNotification('❌ Ошибка', 'Не удалось добавить');
+  }
 }
 
 addBtn.addEventListener('click', addItem);
@@ -162,27 +168,43 @@ itemInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addItem()
 
 function loadData() {
   if (unsubscribe) unsubscribe();
-  const q = query(getUserCollection(), orderBy('createdAt', 'desc'));
-  unsubscribe = onSnapshot(q, (snapshot) => {
-    itemsList.innerHTML = '';
-    if (snapshot.empty) {
-      emptyState.classList.remove('hidden');
-    } else {
-      emptyState.classList.add('hidden');
-      snapshot.forEach((docSnap) => renderItem(docSnap.id, docSnap.data()));
-    }
-  });
+  
+  try {
+    // Загружаем из общей папки family
+    const q = query(getFamilyCollection(), orderBy('createdAt', 'desc'));
+    
+    unsubscribe = onSnapshot(q, (snapshot) => {
+      itemsList.innerHTML = '';
+      
+      if (snapshot.empty) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        snapshot.forEach((docSnap) => {
+          renderItem(docSnap.id, docSnap.data());
+        });
+      }
+    }, (error) => {
+      console.error('Ошибка загрузки:', error);
+    });
+  } catch (error) {
+    console.error('Ошибка:', error);
+  }
 }
 
 function renderItem(id, item) {
   const li = document.createElement('li');
+  
+  // Добавляем информацию о том, кто добавил
+  const userInfo = item.createdByName ? ` (${item.createdByName})` : '';
+  
   li.innerHTML = `
     <div class="swipe-actions">
       <div class="action-complete">Готово</div>
       <div class="action-delete">Удалить</div>
     </div>
     <div class="swipe-content">
-      <span class="item-text ${item.completed ? 'completed' : ''}">${item.text}</span>
+      <span class="item-text ${item.completed ? 'completed' : ''}">${item.text}${userInfo}</span>
     </div>
   `;
 
@@ -212,31 +234,38 @@ function renderItem(id, item) {
     isSwiping = false;
     li.classList.remove('is-swiping');
 
-    if (translateX > threshold) {
-      // СВАЙП ВПРАВО - ОТМЕТИТЬ КАК ВЫПОЛНЕНО
-      const docRef = doc(db, 'users', currentUser.uid, currentTab, id);
-      const newCompletedState = !item.completed;
-      await updateDoc(docRef, { completed: newCompletedState });
-      
-      // ПОКАЗЫВАЕМ УВЕДОМЛЕНИЕ
-      const action = newCompletedState ? '✅ Выполнено' : '↩️ Возвращено';
-      const itemType = currentTab === 'shopping' ? 'покупка' : 'задача';
-      showNotification(action, `${itemType}: ${item.text}`);
-      
-    } else if (translateX < -threshold) {
-      // СВАЙП ВЛЕВО - УДАЛИТЬ
-      li.style.transition = 'all 0.3s ease';
-      li.style.transform = 'translateX(-100%)';
-      li.style.opacity = '0';
-      
-      // ПОКАЗЫВАЕМ УВЕДОМЛЕНИЕ ОБ УДАЛЕНИИ
-      const itemType = currentTab === 'shopping' ? 'покупка' : 'задача';
-      showNotification('🗑️ Удалено', `${itemType}: ${item.text}`);
-      
-      setTimeout(() => deleteDoc(doc(db, 'users', currentUser.uid, currentTab, id)), 300);
-    } else {
+    try {
+      if (translateX > threshold) {
+        // СВАЙП ВПРАВО - ВЫПОЛНЕНО
+        const docRef = doc(db, 'family', currentTab, id);
+        await updateDoc(docRef, { 
+          completed: !item.completed 
+        });
+        
+        showNotification(
+          !item.completed ? '✅ Выполнено' : '↩️ Возвращено', 
+          item.text
+        );
+        
+      } else if (translateX < -threshold) {
+        // СВАЙП ВЛЕВО - УДАЛИТЬ
+        li.style.transition = 'all 0.3s ease';
+        li.style.transform = 'translateX(-100%)';
+        li.style.opacity = '0';
+        
+        showNotification('🗑️ Удалено', item.text);
+        
+        setTimeout(async () => {
+          await deleteDoc(doc(db, 'family', currentTab, id));
+        }, 300);
+      } else {
+        swipeContent.style.transform = 'translateX(0px)';
+      }
+    } catch (error) {
+      console.error('Ошибка при обработке свайпа:', error);
       swipeContent.style.transform = 'translateX(0px)';
     }
+    
     translateX = 0;
   };
 

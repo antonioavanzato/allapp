@@ -52,7 +52,6 @@ async function setupNotifications() {
         await updateDoc(userRef, {
           fcmTokens: arrayUnion(token)
         }).catch(() => {
-          // Если документа нет, создаем
           setDoc(userRef, { fcmTokens: [token] }, { merge: true });
         });
       }

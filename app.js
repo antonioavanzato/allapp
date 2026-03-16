@@ -38,11 +38,38 @@ let currentTab = 'shopping';
 let unsubscribe = null;
 let currentUser = null;
 
-// Словарь для преобразования email в имена
+// Словарь для преобразования email в имена (с разными вариантами)
 const userNames = {
+  // Точные email'ы
   'antonioavanzato@gmail.com': 'Антон',
-  'style_of_live@gmail.com': 'Даша'
+  'style_of_live@gmail.com': 'Даша',
+  
+  // Без @gmail.com
+  'antonioavanzato': 'Антон',
+  'style_of_live': 'Даша',
+  
+  // С нижними подчеркиваниями
+  'style_of_live': 'Даша'
 };
+
+// Функция для получения имени по email
+function getUserDisplayName(email) {
+  if (!email) return '';
+  
+  // Пробуем найти точное совпадение
+  if (userNames[email]) {
+    return userNames[email];
+  }
+  
+  // Пробуем найти без домена
+  const emailWithoutDomain = email.split('@')[0];
+  if (userNames[emailWithoutDomain]) {
+    return userNames[emailWithoutDomain];
+  }
+  
+  // Если ничего не нашли, возвращаем часть email
+  return emailWithoutDomain;
+}
 
 // Показываем/скрываем поле имени
 loginBtn.addEventListener('click', () => {
@@ -157,19 +184,6 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ ИМЕНИ
-function getUserDisplayName(email) {
-  if (!email) return '';
-  
-  // Сначала проверяем по словарю
-  if (userNames[email]) {
-    return userNames[email];
-  }
-  
-  // Если нет в словаре, берем часть email
-  return email.split('@')[0];
-}
-
 function getFamilyCollection() {
   return collection(db, 'family', 'shared', currentTab);
 }
@@ -220,17 +234,16 @@ function loadData() {
   }
 }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ОТОБРАЖЕНИЯ
 function renderItem(id, item) {
   const li = document.createElement('li');
   
-  // ПОЛУЧАЕМ ИМЯ - сначала проверяем createdByName, потом createdBy
+  // Получаем имя для отображения
   let displayName = '';
   if (item.createdByName) {
     // Если есть сохраненное имя, используем его
     displayName = item.createdByName;
   } else if (item.createdBy) {
-    // Если нет имени, но есть email, получаем имя из словаря
+    // Если нет имени, но есть email, получаем имя
     displayName = getUserDisplayName(item.createdBy);
   }
   
@@ -326,17 +339,17 @@ navItems.forEach(nav => {
   });
 });
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ СТАРЫХ ЗАПИСЕЙ
-window.updateOldItems = async function() {
+// Улучшенная функция для принудительного обновления всех записей
+window.forceUpdateNames = async function() {
   const user = auth.currentUser;
   if (!user) {
-    console.log('Сначала войдите');
+    console.log('❌ Сначала войдите в приложение');
     return;
   }
   
+  console.log('🔄 Начинаем обновление всех записей...');
+  
   try {
-    console.log('Начинаем обновление старых записей...');
-    
     // Обновляем покупки
     const shoppingSnap = await getDocs(collection(db, 'family', 'shared', 'shopping'));
     let shoppingCount = 0;
@@ -345,13 +358,11 @@ window.updateOldItems = async function() {
       const data = docItem.data();
       const properName = getUserDisplayName(data.createdBy);
       
-      // Обновляем, если имя не совпадает или отсутствует
-      if (data.createdByName !== properName) {
-        await updateDoc(doc(db, 'family', 'shared', 'shopping', docItem.id), {
-          createdByName: properName
-        });
-        shoppingCount++;
-      }
+      // Принудительно обновляем поле createdByName
+      await updateDoc(doc(db, 'family', 'shared', 'shopping', docItem.id), {
+        createdByName: properName
+      });
+      shoppingCount++;
     }
     
     // Обновляем задачи
@@ -362,18 +373,27 @@ window.updateOldItems = async function() {
       const data = docItem.data();
       const properName = getUserDisplayName(data.createdBy);
       
-      if (data.createdByName !== properName) {
-        await updateDoc(doc(db, 'family', 'shared', 'tasks', docItem.id), {
-          createdByName: properName
-        });
-        tasksCount++;
-      }
+      await updateDoc(doc(db, 'family', 'shared', 'tasks', docItem.id), {
+        createdByName: properName
+      });
+      tasksCount++;
     }
     
     console.log(`✅ Обновлено покупок: ${shoppingCount}, задач: ${tasksCount}`);
-    console.log('Теперь обновите страницу (F5)');
+    console.log('🔄 Теперь обновите страницу (F5)');
     
   } catch (error) {
-    console.error('Ошибка:', error);
+    console.error('❌ Ошибка:', error);
   }
+};
+
+// Функция для проверки текущих имен
+window.checkNames = async function() {
+  console.log('📋 Текущие имена в базе:');
+  
+  const shoppingSnap = await getDocs(collection(db, 'family', 'shared', 'shopping'));
+  shoppingSnap.forEach(doc => {
+    const data = doc.data();
+    console.log(`Покупка: ${data.text}, createdBy: ${data.createdBy}, createdByName: ${data.createdByName}`);
+  });
 };

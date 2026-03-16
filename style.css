@@ -47,3 +47,37 @@ li:not(.is-swiping) .swipe-content { transition: transform 0.3s ease; }
 .swipe-actions { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; color: white; font-weight: 600; }
 .action-complete { background-color: var(--color-complete); padding: 0 30px; height: 100%; display: flex; align-items: center; justify-content: flex-start; position: absolute; left: 0; transform: translateX(-100%); }
 .action-delete { background-color: var(--color-delete); padding: 0 30px; height: 100%; display: flex; align-items: center; justify-content: flex-end; position: absolute; right: 0; transform: translateX(100%); }
+/* Добавьте в конец файла style.css */
+
+.notification-bell {
+  background: var(--accent);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  animation: bounce 1s ease;
+  cursor: pointer;
+}
+
+.notification-bell.hidden {
+  display: none;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+/* Индикатор загрузки для уведомлений */
+.loading-notification {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 14px;
+  z-index: 1000;
+}

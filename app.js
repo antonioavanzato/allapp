@@ -79,6 +79,61 @@ async function setupNotifications() {
   }
 }
 
+// Сохранение токена в Firestore через Cloud Function
+async function saveTokenToServer(token) {
+  if (!currentUser) return;
+  
+  try {
+    // Получаем функцию из Firebase
+    const functions = getFunctions(app);
+    const saveTokenFunction = httpsCallable(functions, 'saveUserToken');
+    
+    const result = await saveTokenFunction({ token });
+    console.log('Токен сохранен на сервере:', result.data);
+  } catch (error) {
+    console.log('Ошибка сохранения токена:', error);
+    
+    // Альтернатива: сохраняем напрямую в Firestore
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        fcmTokens: arrayUnion(token)
+      });
+    } catch (e) {
+      console.log('Не удалось сохранить токен:', e);
+    }
+  }
+}
+
+// Обновите setupNotifications
+async function setupNotifications() {
+  if (!('Notification' in window)) {
+    console.log('Браузер не поддерживает уведомления');
+    return;
+  }
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      notificationPermission = true;
+      
+      // Получаем токен устройства
+      const token = await getToken(messaging, {
+        vapidKey: 'BGz2...' // Ваш VAPID ключ из консоли Firebase
+      });
+      
+      console.log('Токен для уведомлений:', token);
+      
+      // Сохраняем токен
+      if (currentUser && token) {
+        await saveTokenToServer(token);
+      }
+    }
+  } catch (error) {
+    console.log('Ошибка при запросе уведомлений:', error);
+  }
+}
+
 // Слушаем уведомления, когда приложение открыто
 onMessage(messaging, (payload) => {
   console.log('Получено уведомление:', payload);

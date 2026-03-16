@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
@@ -37,7 +37,8 @@ let currentTab = 'shopping';
 let unsubscribe = null;
 let currentUser = null;
 
-async function setupNotifications() {
+// Функция для уведомлений - ОДИН РАЗ
+const setupNotifications = async () => {
   if (!('Notification' in window)) return;
   
   try {
@@ -51,16 +52,17 @@ async function setupNotifications() {
         const userRef = doc(db, 'users', currentUser.uid);
         await updateDoc(userRef, {
           fcmTokens: arrayUnion(token)
-        }).catch(() => {
-          setDoc(userRef, { fcmTokens: [token] }, { merge: true });
+        }).catch(async () => {
+          await setDoc(userRef, { fcmTokens: [token] }, { merge: true });
         });
       }
     }
   } catch (error) {
     console.log('Ошибка уведомлений:', error);
   }
-}
+};
 
+// Слушаем уведомления
 onMessage(messaging, (payload) => {
   console.log('Уведомление:', payload);
   if (Notification.permission === 'granted') {

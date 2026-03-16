@@ -363,7 +363,12 @@ const quickGrid = document.getElementById('quick-grid');
 const quickArrow = document.getElementById('quick-arrow');
 
 if (quickToggle && quickGrid && quickArrow) {
-  let isQuickExpanded = true; // по умолчанию развернут
+  // По умолчанию свернут
+  let isQuickExpanded = false;
+  
+  // Сразу применяем свернутое состояние
+  quickGrid.classList.add('collapsed');
+  quickArrow.classList.add('collapsed');
 
   quickToggle.addEventListener('click', () => {
     if (isQuickExpanded) {

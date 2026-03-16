@@ -39,6 +39,7 @@ const quickContainer = document.getElementById('quick-products-container');
 const inputGroup = document.getElementById('input-group');
 const listSection = document.getElementById('list-section');
 const calendarContainer = document.getElementById('albus-calendar');
+const coffeeSection = document.getElementById('coffee-section'); // Новый раздел
 
 // Элементы календаря
 const calendarDays = document.getElementById('calendar-days');
@@ -46,9 +47,24 @@ const currentMonthSpan = document.getElementById('current-month');
 const prevMonthBtn = document.getElementById('prev-month');
 const nextMonthBtn = document.getElementById('next-month');
 
+// Элементы кофе
+const coffeeName = document.getElementById('coffee-name');
+const coffeeProcessing = document.getElementById('coffee-processing');
+const coffeeRoastDate = document.getElementById('coffee-roast-date');
+const coffeeCurrentDateSpan = document.getElementById('coffee-current-date');
+const coffeeGrind = document.getElementById('coffee-grind');
+const coffeeTemp = document.getElementById('coffee-temp');
+const coffeeWater = document.getElementById('coffee-water');
+const coffeeBloom = document.getElementById('coffee-bloom');
+const coffeeFirstPour = document.getElementById('coffee-first-pour');
+const coffeeSecondPour = document.getElementById('coffee-second-pour');
+const coffeeSaveBtn = document.getElementById('coffee-save');
+const coffeeRecipesList = document.getElementById('coffee-recipes-list');
+
 let currentTab = 'shopping';
 let unsubscribe = null;
 let unsubscribeCalendar = null;
+let unsubscribeCoffee = null;
 let currentUser = null;
 
 // Текущий месяц для календаря
@@ -144,9 +160,11 @@ onAuthStateChanged(auth, (user) => {
     currentUser = null;
     if (unsubscribe) unsubscribe();
     if (unsubscribeCalendar) unsubscribeCalendar();
+    if (unsubscribeCoffee) unsubscribeCoffee();
     mainApp.classList.add('hidden');
     authScreen.classList.remove('hidden');
     itemsList.innerHTML = '';
+    coffeeRecipesList.innerHTML = '';
   }
 });
 
@@ -165,31 +183,37 @@ function switchTab(tab) {
     if (tab === 'shopping') pageTitle.textContent = 'Покупки';
     else if (tab === 'tasks') pageTitle.textContent = 'Задачи';
     else if (tab === 'albus') pageTitle.textContent = 'Альбус';
+    else if (tab === 'coffee') pageTitle.textContent = 'Кофе';
   }
   
   // Скрыть/показать соответствующие блоки
   if (tab === 'shopping' || tab === 'tasks') {
-    // Показываем блоки для списков
     if (quickContainer) quickContainer.style.display = tab === 'shopping' ? 'block' : 'none';
     if (inputGroup) inputGroup.style.display = 'flex';
     if (listSection) listSection.style.display = 'block';
     if (calendarContainer) calendarContainer.classList.add('hidden');
+    if (coffeeSection) coffeeSection.classList.add('hidden');
     
-    // Обновляем placeholder и заголовок списка
     if (listTitle) listTitle.textContent = tab === 'shopping' ? 'Список покупок' : 'Список задач';
     if (itemInput) itemInput.placeholder = tab === 'shopping' ? 'Что купить?..' : 'Новая задача...';
     
-    // Загружаем данные соответствующей коллекции
     loadListData();
   } else if (tab === 'albus') {
-    // Прячем всё, что относится к спискам
     if (quickContainer) quickContainer.style.display = 'none';
     if (inputGroup) inputGroup.style.display = 'none';
     if (listSection) listSection.style.display = 'none';
     if (calendarContainer) calendarContainer.classList.remove('hidden');
+    if (coffeeSection) coffeeSection.classList.add('hidden');
     
-    // Загружаем календарь
     loadCalendar();
+  } else if (tab === 'coffee') {
+    if (quickContainer) quickContainer.style.display = 'none';
+    if (inputGroup) inputGroup.style.display = 'none';
+    if (listSection) listSection.style.display = 'none';
+    if (calendarContainer) calendarContainer.classList.add('hidden');
+    if (coffeeSection) coffeeSection.classList.remove('hidden');
+    
+    loadCoffeeRecipes();
   }
 }
 
@@ -381,23 +405,18 @@ function loadCalendar() {
 }
 
 function renderCalendar(year, month) {
-  // Отображаем месяц и год
   const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
   currentMonthSpan.textContent = `${monthNames[month]} ${year}`;
 
-  // Получаем первый день месяца (0 - воскресенье, нам нужно смещение для понедельника)
   const firstDay = new Date(year, month, 1);
-  let startDayOfWeek = firstDay.getDay(); // 0 = воскресенье, 1 = понедельник, ...
+  let startDayOfWeek = firstDay.getDay();
   let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
-
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // Генерируем массив дней с пустыми ячейками в начале
   const daysArray = [];
   for (let i = 0; i < startOffset; i++) daysArray.push(null);
   for (let d = 1; d <= daysInMonth; d++) daysArray.push(d);
 
-  // Запрашиваем отметки за этот месяц
   const startDateStr = `${year}-${String(month+1).padStart(2,'0')}-01`;
   const endDateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
   
@@ -435,7 +454,6 @@ function renderCalendar(year, month) {
   });
 }
 
-// Обработка клика на день календаря
 async function handleDayClick(dateStr, dayElement) {
   if (!currentUser) return;
   
@@ -461,7 +479,6 @@ async function handleDayClick(dateStr, dayElement) {
   }
 }
 
-// Переключение месяцев
 if (prevMonthBtn && nextMonthBtn) {
   prevMonthBtn.addEventListener('click', () => {
     currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
@@ -471,4 +488,120 @@ if (prevMonthBtn && nextMonthBtn) {
     currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
     renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
   });
+}
+
+// ---------- Кофе: рецепты ----------
+// Отображение текущей даты рядом с датой обжарки
+function updateCurrentDate() {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = today.getFullYear();
+  coffeeCurrentDateSpan.textContent = `${day}.${month}.${year}`;
+}
+updateCurrentDate();
+
+// Сохранение рецепта
+coffeeSaveBtn.addEventListener('click', async () => {
+  if (!currentUser) return;
+  
+  const name = coffeeName.value.trim();
+  if (!name) {
+    showToast('Введите название', 'error');
+    return;
+  }
+  
+  const recipe = {
+    name: name,
+    processing: coffeeProcessing.value.trim(),
+    roastDate: coffeeRoastDate.value,
+    currentDate: new Date().toISOString().split('T')[0],
+    grind: coffeeGrind.value ? Number(coffeeGrind.value) : null,
+    temp: coffeeTemp.value ? Number(coffeeTemp.value) : null,
+    water: coffeeWater.value ? Number(coffeeWater.value) : null,
+    bloom: coffeeBloom.value ? Number(coffeeBloom.value) : null,
+    firstPour: coffeeFirstPour.value ? Number(coffeeFirstPour.value) : null,
+    secondPour: coffeeSecondPour.value ? Number(coffeeSecondPour.value) : null,
+    createdBy: currentUser.email,
+    createdAt: serverTimestamp()
+  };
+  
+  try {
+    await addDoc(collection(db, 'family', 'shared', 'coffee'), recipe);
+    showToast('Рецепт сохранён');
+    // Очистить форму
+    coffeeName.value = '';
+    coffeeProcessing.value = '';
+    coffeeRoastDate.value = '';
+    coffeeGrind.value = '';
+    coffeeTemp.value = '';
+    coffeeWater.value = '';
+    coffeeBloom.value = '';
+    coffeeFirstPour.value = '';
+    coffeeSecondPour.value = '';
+  } catch (error) {
+    console.error('Ошибка сохранения рецепта:', error);
+    showToast('Ошибка', 'error');
+  }
+});
+
+// Загрузка рецептов
+function loadCoffeeRecipes() {
+  if (unsubscribeCoffee) unsubscribeCoffee();
+  
+  const q = query(collection(db, 'family', 'shared', 'coffee'), orderBy('createdAt', 'desc'));
+  
+  unsubscribeCoffee = onSnapshot(q, (snapshot) => {
+    coffeeRecipesList.innerHTML = '';
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      renderCoffeeRecipe(docSnap.id, data);
+    });
+  }, error => console.error('Ошибка загрузки рецептов:', error));
+}
+
+// Отрисовка карточки рецепта
+function renderCoffeeRecipe(id, data) {
+  const card = document.createElement('div');
+  card.className = 'coffee-recipe-card';
+  
+  const dateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : 'не указана';
+  const currentDateStr = data.currentDate ? new Date(data.currentDate).toLocaleDateString('ru-RU') : '';
+  
+  card.innerHTML = `
+    <div class="coffee-recipe-name">${data.name}</div>
+    <div class="coffee-recipe-detail">
+      ${data.processing ? `<span>🌱 ${data.processing}</span>` : ''}
+      ${data.roastDate ? `<span>🔥 Обжарка: ${dateStr}</span>` : ''}
+      ${currentDateStr ? `<span>📅 Сегодня: ${currentDateStr}</span>` : ''}
+    </div>
+    <div class="coffee-recipe-detail">
+      ${data.grind ? `<span>⚙️ Помол: ${data.grind}</span>` : ''}
+      ${data.temp ? `<span>🌡️ ${data.temp}°C</span>` : ''}
+      ${data.water ? `<span>💧 ${data.water}мл</span>` : ''}
+    </div>
+    <div class="coffee-recipe-detail">
+      ${data.bloom ? `<span>⏳ Блум: ${data.bloom}с</span>` : ''}
+      ${data.firstPour ? `<span>🥤 Первый: ${data.firstPour}с</span>` : ''}
+      ${data.secondPour ? `<span>🥤 Второй: ${data.secondPour}с</span>` : ''}
+    </div>
+    <div class="coffee-recipe-actions">
+      <button class="coffee-recipe-delete" data-id="${id}">🗑️</button>
+    </div>
+  `;
+  
+  card.querySelector('.coffee-recipe-delete').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (confirm('Удалить рецепт?')) {
+      try {
+        await deleteDoc(doc(db, 'family', 'shared', 'coffee', id));
+        showToast('Рецепт удалён');
+      } catch (error) {
+        console.error('Ошибка удаления:', error);
+        showToast('Ошибка', 'error');
+      }
+    }
+  });
+  
+  coffeeRecipesList.appendChild(card);
 }

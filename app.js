@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, setDoc, getDocs, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
@@ -17,6 +17,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const messaging = getMessaging(app);
 
+// DOM элементы
 const authScreen = document.getElementById('auth-screen');
 const mainApp = document.getElementById('main-app');
 const emailInput = document.getElementById('email-input');
@@ -32,10 +33,23 @@ const navItems = document.querySelectorAll('.nav-item');
 const listTitle = document.getElementById('list-title');
 const emptyState = document.getElementById('empty-state');
 const quickContainer = document.getElementById('quick-products-container');
+const inputGroup = document.getElementById('input-group');
+const listSection = document.getElementById('list-section');
+const calendarContainer = document.getElementById('albus-calendar');
 
-let currentTab = 'shopping';
-let unsubscribe = null;
+// Элементы календаря
+const calendarDays = document.getElementById('calendar-days');
+const currentMonthSpan = document.getElementById('current-month');
+const prevMonthBtn = document.getElementById('prev-month');
+const nextMonthBtn = document.getElementById('next-month');
+
+let currentTab = 'shopping'; // shopping, tasks, albus
+let unsubscribe = null; // для списков покупок/задач
+let unsubscribeCalendar = null; // для календаря
 let currentUser = null;
+
+// Текущий месяц для календаря
+let currentCalendarDate = new Date();
 
 // Словарь имен
 const userNames = {
@@ -53,6 +67,7 @@ function getUserDisplayName(email) {
   return emailWithoutDomain;
 }
 
+// Уведомления
 function showNotification(title, body) {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'granted') {
@@ -65,19 +80,17 @@ function showNotification(title, body) {
   }
 }
 
+// Тосты
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast-message');
   if (!toast) return;
-  
   const icons = { success: '✅', error: '❌', warning: '⚠️' };
   toast.textContent = `${icons[type] || '✅'} ${message}`;
   toast.classList.remove('hidden');
-  
-  setTimeout(() => {
-    toast.classList.add('hidden');
-  }, 2000);
+  setTimeout(() => toast.classList.add('hidden'), 2000);
 }
 
+// Прокрутка к новому элементу
 function scrollToNewItem() {
   setTimeout(() => {
     const lastItem = itemsList.lastElementChild;
@@ -85,9 +98,7 @@ function scrollToNewItem() {
       lastItem.style.transition = 'background-color 0.5s ease';
       lastItem.style.backgroundColor = 'rgba(0, 122, 255, 0.15)';
       lastItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => {
-        lastItem.style.backgroundColor = '';
-      }, 1000);
+      setTimeout(() => lastItem.style.backgroundColor = '', 1000);
     }
   }, 100);
 }
@@ -96,12 +107,10 @@ function scrollToNewItem() {
 loginBtn.addEventListener('click', async () => {
   const email = emailInput?.value;
   const password = passwordInput?.value;
-  
   if (!email || !password) {
     if (authError) authError.textContent = 'Введите email и пароль';
     return;
   }
-  
   try {
     if (authError) authError.textContent = '';
     await signInWithEmailAndPassword(auth, email, password);
@@ -114,83 +123,129 @@ loginBtn.addEventListener('click', async () => {
 
 // Выход
 logoutBtn.addEventListener('click', () => {
-  signOut(auth).catch(error => {
-    console.error('Ошибка выхода:', error);
-  });
+  signOut(auth).catch(error => console.error('Ошибка выхода:', error));
 });
 
 // Состояние авторизации
 onAuthStateChanged(auth, (user) => {
   console.log('Auth state changed:', user ? 'пользователь есть' : 'пользователя нет');
-  
   if (user) {
     currentUser = user;
-    if (authScreen) authScreen.classList.add('hidden');
-    if (mainApp) mainApp.classList.remove('hidden');
-    loadData();
-    
+    authScreen.classList.add('hidden');
+    mainApp.classList.remove('hidden');
+    // По умолчанию показываем покупки
+    switchTab('shopping');
     // Запрос уведомлений
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    if (Notification.permission === 'default') Notification.requestPermission();
   } else {
     currentUser = null;
     if (unsubscribe) unsubscribe();
-    if (mainApp) mainApp.classList.add('hidden');
-    if (authScreen) authScreen.classList.remove('hidden');
-    if (itemsList) itemsList.innerHTML = '';
+    if (unsubscribeCalendar) unsubscribeCalendar();
+    mainApp.classList.add('hidden');
+    authScreen.classList.remove('hidden');
+    itemsList.innerHTML = '';
   }
 });
 
-function getFamilyCollection() {
-  return collection(db, 'family', 'shared', currentTab);
+// Функция переключения вкладок
+function switchTab(tab) {
+  currentTab = tab;
+  
+  // Обновление активного класса на кнопках
+  navItems.forEach(nav => {
+    nav.classList.remove('active');
+    if (nav.dataset.tab === tab) nav.classList.add('active');
+  });
+  
+  // Обновление заголовка
+  if (pageTitle) {
+    if (tab === 'shopping') pageTitle.textContent = 'Покупки';
+    else if (tab === 'tasks') pageTitle.textContent = 'Задачи';
+    else if (tab === 'albus') pageTitle.textContent = 'Альбус';
+  }
+  
+  // Скрыть/показать соответствующие блоки
+  if (tab === 'shopping' || tab === 'tasks') {
+    // Показываем блоки для списков
+    if (quickContainer) quickContainer.style.display = tab === 'shopping' ? 'block' : 'none';
+    if (inputGroup) inputGroup.style.display = 'flex';
+    if (listSection) listSection.style.display = 'block';
+    if (calendarContainer) calendarContainer.classList.add('hidden');
+    
+    // Обновляем placeholder и заголовок списка
+    if (listTitle) listTitle.textContent = tab === 'shopping' ? 'Список покупок' : 'Список задач';
+    if (itemInput) itemInput.placeholder = tab === 'shopping' ? 'Что купить?..' : 'Новая задача...';
+    
+    // Загружаем данные соответствующей коллекции
+    loadListData();
+  } else if (tab === 'albus') {
+    // Прячем всё, что относится к спискам
+    if (quickContainer) quickContainer.style.display = 'none';
+    if (inputGroup) inputGroup.style.display = 'none';
+    if (listSection) listSection.style.display = 'none';
+    if (calendarContainer) calendarContainer.classList.remove('hidden');
+    
+    // Загружаем календарь
+    loadCalendar();
+  }
 }
 
-// Добавление элемента
+// Загрузка данных списка (shopping / tasks)
+function loadListData() {
+  if (unsubscribe) unsubscribe();
+  if (!currentUser) return;
+  
+  const collectionRef = collection(db, 'family', 'shared', currentTab);
+  const q = query(collectionRef, orderBy('createdAt', 'desc'));
+  
+  unsubscribe = onSnapshot(q, (snapshot) => {
+    itemsList.innerHTML = '';
+    if (snapshot.empty) {
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+      snapshot.forEach(docSnap => renderItem(docSnap.id, docSnap.data()));
+    }
+  }, error => console.error('Ошибка загрузки:', error));
+}
+
+// Добавление элемента (для shopping / tasks)
 async function addItem() {
   const text = itemInput?.value.trim();
   if (!text || !currentUser) return;
-  if (itemInput) itemInput.value = '';
+  itemInput.value = '';
   
   try {
-    await addDoc(getFamilyCollection(), {
+    await addDoc(collection(db, 'family', 'shared', currentTab), {
       text: text,
       completed: false,
       createdAt: serverTimestamp(),
       createdBy: currentUser.email,
       createdByName: getUserDisplayName(currentUser.email)
     });
-    
     showToast(`Добавлено: ${text}`);
     scrollToNewItem();
   } catch (error) {
-    console.error('Ошибка:', error);
+    console.error('Ошибка при добавлении:', error);
     showToast('Ошибка при добавлении', 'error');
   }
 }
-
 if (addBtn) addBtn.addEventListener('click', addItem);
-if (itemInput) {
-  itemInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') addItem();
-  });
-}
+if (itemInput) itemInput.addEventListener('keypress', e => { if (e.key === 'Enter') addItem(); });
 
 // Быстрые кнопки
 document.querySelectorAll('.quick-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
     const product = btn.dataset.product;
     if (!product || !currentUser) return;
-    
     try {
-      await addDoc(getFamilyCollection(), {
+      await addDoc(collection(db, 'family', 'shared', 'shopping'), {
         text: product,
         completed: false,
         createdAt: serverTimestamp(),
         createdBy: currentUser.email,
         createdByName: getUserDisplayName(currentUser.email)
       });
-      
       showToast(`Добавлено: ${product}`);
       scrollToNewItem();
     } catch (error) {
@@ -200,43 +255,11 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   });
 });
 
-function loadData() {
-  if (unsubscribe) unsubscribe();
-  if (!currentUser) return;
-  
-  try {
-    const q = query(getFamilyCollection(), orderBy('createdAt', 'desc'));
-    
-    unsubscribe = onSnapshot(q, (snapshot) => {
-      if (itemsList) itemsList.innerHTML = '';
-      
-      if (snapshot.empty) {
-        if (emptyState) emptyState.classList.remove('hidden');
-      } else {
-        if (emptyState) emptyState.classList.add('hidden');
-        snapshot.forEach((docSnap) => {
-          renderItem(docSnap.id, docSnap.data());
-        });
-      }
-    }, (error) => {
-      console.error('Ошибка загрузки:', error);
-    });
-  } catch (error) {
-    console.error('Ошибка:', error);
-  }
-}
-
+// Отрисовка элемента списка (shopping / tasks)
 function renderItem(id, item) {
   if (!itemsList) return;
-  
   const li = document.createElement('li');
-  
-  let displayName = '';
-  if (item.createdByName) {
-    displayName = item.createdByName;
-  } else if (item.createdBy) {
-    displayName = getUserDisplayName(item.createdBy);
-  }
+  let displayName = item.createdByName || getUserDisplayName(item.createdBy);
   
   li.innerHTML = `
     <div class="swipe-actions">
@@ -254,32 +277,23 @@ function renderItem(id, item) {
   const swipeContent = li.querySelector('.swipe-content');
   let startX = 0, currentX = 0, translateX = 0, isSwiping = false;
   const threshold = 80;
+  const getX = e => e.touches ? e.touches[0].clientX : e.clientX;
 
-  const getX = (e) => e.touches ? e.touches[0].clientX : e.clientX;
-
-  const start = (e) => {
+  const start = e => {
     startX = getX(e);
     isSwiping = true;
     li.classList.add('is-swiping');
-    // Убираем классы направления при старте
     li.classList.remove('swiping-right', 'swiping-left');
   };
 
-  const move = (e) => {
+  const move = e => {
     if (!isSwiping) return;
     currentX = getX(e);
     translateX = currentX - startX;
-    
-    // Ограничение свайпа
     if (translateX > 120) translateX = 120;
     if (translateX < -120) translateX = -120;
+    if (swipeContent) swipeContent.style.transform = `translateX(${translateX}px)`;
     
-    // Двигаем контент
-    if (swipeContent) {
-      swipeContent.style.transform = `translateX(${translateX}px)`;
-    }
-    
-    // Добавляем цвет в зависимости от направления
     if (translateX > 20) {
       li.classList.add('swiping-right');
       li.classList.remove('swiping-left');
@@ -295,10 +309,8 @@ function renderItem(id, item) {
     if (!isSwiping) return;
     isSwiping = false;
     li.classList.remove('is-swiping');
-    
-    // Убираем цвет
     li.classList.remove('swiping-right', 'swiping-left');
-
+    
     try {
       if (translateX > threshold) {
         const docRef = doc(db, 'family', 'shared', currentTab, id);
@@ -332,44 +344,21 @@ function renderItem(id, item) {
   itemsList.appendChild(li);
 }
 
-// Навигация
+// Навигация по вкладкам
 navItems.forEach(nav => {
   nav.addEventListener('click', () => {
-    navItems.forEach(n => n.classList.remove('active'));
-    nav.classList.add('active');
-    currentTab = nav.dataset.tab;
-    
-    if (pageTitle) {
-      pageTitle.textContent = currentTab === 'shopping' ? 'Покупки' : 'Задачи';
-    }
-    if (listTitle) {
-      listTitle.textContent = currentTab === 'shopping' ? 'Список покупок' : 'Список задач';
-    }
-    if (itemInput) {
-      itemInput.placeholder = currentTab === 'shopping' ? 'Что купить?..' : 'Новая задача...';
-    }
-    
-    if (quickContainer) {
-      quickContainer.style.display = currentTab === 'shopping' ? 'block' : 'none';
-    }
-    
-    if (currentUser) loadData();
+    switchTab(nav.dataset.tab);
   });
 });
 
-// Сворачивание блока быстрых продуктов
+// Сворачивание блока быстрых продуктов (по умолчанию свернут)
 const quickToggle = document.getElementById('quick-toggle');
 const quickGrid = document.getElementById('quick-grid');
 const quickArrow = document.getElementById('quick-arrow');
-
 if (quickToggle && quickGrid && quickArrow) {
-  // По умолчанию свернут
   let isQuickExpanded = false;
-  
-  // Сразу применяем свернутое состояние
   quickGrid.classList.add('collapsed');
   quickArrow.classList.add('collapsed');
-
   quickToggle.addEventListener('click', () => {
     if (isQuickExpanded) {
       quickGrid.classList.add('collapsed');
@@ -381,3 +370,112 @@ if (quickToggle && quickGrid && quickArrow) {
     isQuickExpanded = !isQuickExpanded;
   });
 }
+
+// ---------- Календарь для Альбуса ----------
+function loadCalendar() {
+  if (unsubscribeCalendar) unsubscribeCalendar();
+  renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
+}
+
+function renderCalendar(year, month) {
+  // Отображаем месяц и год
+  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  currentMonthSpan.textContent = `${monthNames[month]} ${year}`;
+
+  // Получаем первый день месяца (0 - понедельник? нам нужен понедельник первым)
+  const firstDay = new Date(year, month, 1);
+  let startDayOfWeek = firstDay.getDay(); // 0 = воскресенье, 1 = понедельник, ...
+  // Сдвигаем, чтобы понедельник был 0
+  let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // если воскресенье (0) -> смещение 6, иначе -1
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Генерируем массив дней с пустыми ячейками в начале
+  const daysArray = [];
+  for (let i = 0; i < startOffset; i++) {
+    daysArray.push(null); // пустая ячейка
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    daysArray.push(d);
+  }
+
+  // Запрашиваем отметки за этот месяц
+  const startDateStr = `${year}-${String(month+1).padStart(2,'0')}-01`;
+  const endDateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
+  
+  const q = query(
+    collection(db, 'family', 'shared', 'albus'),
+    where('date', '>=', startDateStr),
+    where('date', '<=', endDateStr)
+  );
+
+  if (unsubscribeCalendar) unsubscribeCalendar();
+  unsubscribeCalendar = onSnapshot(q, (snapshot) => {
+    // Собираем отметки в объект { date: taken }
+    const takenMap = {};
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      takenMap[data.date] = data.taken;
+    });
+
+    // Отрисовываем дни
+    calendarDays.innerHTML = '';
+    daysArray.forEach(day => {
+      const dayDiv = document.createElement('div');
+      dayDiv.className = 'calendar-day';
+      if (day === null) {
+        dayDiv.classList.add('empty');
+      } else {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        dayDiv.textContent = day;
+        if (takenMap[dateStr] === true) {
+          dayDiv.classList.add('taken');
+        }
+        dayDiv.dataset.date = dateStr;
+        dayDiv.addEventListener('click', () => handleDayClick(dateStr, dayDiv));
+      }
+      calendarDays.appendChild(dayDiv);
+    });
+  });
+}
+
+// Обработка клика на день календаря
+async function handleDayClick(dateStr, dayElement) {
+  if (!currentUser) return;
+  
+  const docRef = doc(db, 'family', 'shared', 'albus', dateStr); // используем дату как ID документа
+  try {
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const current = docSnap.data().taken;
+      await updateDoc(docRef, { taken: !current });
+      showToast(!current ? 'Отмечено' : 'Отмена', 'success');
+    } else {
+      await setDoc(docRef, {
+        date: dateStr,
+        taken: true,
+        createdBy: currentUser.email,
+        createdAt: serverTimestamp()
+      });
+      showToast('✅ Отмечено', 'success');
+    }
+  } catch (error) {
+    console.error('Ошибка при отметке:', error);
+    showToast('Ошибка', 'error');
+  }
+}
+
+// Переключение месяцев
+if (prevMonthBtn && nextMonthBtn) {
+  prevMonthBtn.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+    renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
+  });
+  nextMonthBtn.addEventListener('click', () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+    renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
+  });
+}
+
+// ---------- Инициализация ----------
+// При загрузке страницы активная вкладка уже установлена через onAuthStateChanged

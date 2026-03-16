@@ -178,7 +178,7 @@ h1 {
 .quick-grid {
   overflow: hidden;
   transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
-  max-height: 500px; /* Должно хватать для всех кнопок */
+  max-height: 500px;
   opacity: 1;
   margin-top: 12px;
 }
@@ -303,11 +303,11 @@ li {
 
 /* Динамические цвета при свайпе */
 li.swiping-right .swipe-content {
-  background-color: rgba(52, 199, 89, 0.15); /* Зеленый полупрозрачный */
+  background-color: rgba(52, 199, 89, 0.15);
 }
 
 li.swiping-left .swipe-content {
-  background-color: rgba(255, 59, 48, 0.15); /* Красный полупрозрачный */
+  background-color: rgba(255, 59, 48, 0.15);
 }
 
 .item-text { 
@@ -452,41 +452,6 @@ li.swiping-left .swipe-content {
   animation: highlight 1.5s ease;
 }
 
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-color: #000000;
-    --card-bg: #1c1c1e;
-    --text-main: #ffffff;
-    --text-muted: #8e8e93;
-    --border: #38383a;
-  }
-  
-  .header {
-    background: rgba(0, 0, 0, 0.85);
-  }
-  
-  .bottom-nav {
-    background: rgba(28, 28, 30, 0.9);
-  }
-}
-
-/* Mobile Optimizations */
-@media (max-width: 480px) {
-  .quick-grid {
-    gap: 6px;
-  }
-  
-  .quick-btn {
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-  
-  .content {
-    padding: 12px;
-  }
-}
-
 /* Calendar Styles for Albus */
 .calendar-container {
   background: var(--card-bg);
@@ -592,8 +557,40 @@ li.swiping-left .swipe-content {
   transform: scale(0.95);
 }
 
-/* Адаптив для календаря */
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #000000;
+    --card-bg: #1c1c1e;
+    --text-main: #ffffff;
+    --text-muted: #8e8e93;
+    --border: #38383a;
+  }
+  
+  .header {
+    background: rgba(0, 0, 0, 0.85);
+  }
+  
+  .bottom-nav {
+    background: rgba(28, 28, 30, 0.9);
+  }
+}
+
+/* Mobile Optimizations */
 @media (max-width: 480px) {
+  .quick-grid {
+    gap: 6px;
+  }
+  
+  .quick-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .content {
+    padding: 12px;
+  }
+  
   .calendar-day {
     font-size: 14px;
   }

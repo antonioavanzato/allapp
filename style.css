@@ -557,45 +557,6 @@ li.swiping-left .swipe-content {
   transform: scale(0.95);
 }
 
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-color: #000000;
-    --card-bg: #1c1c1e;
-    --text-main: #ffffff;
-    --text-muted: #8e8e93;
-    --border: #38383a;
-  }
-  
-  .header {
-    background: rgba(0, 0, 0, 0.85);
-  }
-  
-  .bottom-nav {
-    background: rgba(28, 28, 30, 0.9);
-  }
-}
-
-/* Mobile Optimizations */
-@media (max-width: 480px) {
-  .quick-grid {
-    gap: 6px;
-  }
-  
-  .quick-btn {
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-  
-  .content {
-    padding: 12px;
-  }
-  
-  .calendar-day {
-    font-size: 14px;
-  }
-}
-
 /* Coffee Section */
 .coffee-container {
   display: flex;
@@ -751,4 +712,43 @@ li.swiping-left .swipe-content {
 
 .coffee-recipe-delete:active {
   opacity: 0.8;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #000000;
+    --card-bg: #1c1c1e;
+    --text-main: #ffffff;
+    --text-muted: #8e8e93;
+    --border: #38383a;
+  }
+  
+  .header {
+    background: rgba(0, 0, 0, 0.85);
+  }
+  
+  .bottom-nav {
+    background: rgba(28, 28, 30, 0.9);
+  }
+}
+
+/* Mobile Optimizations */
+@media (max-width: 480px) {
+  .quick-grid {
+    gap: 6px;
+  }
+  
+  .quick-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .content {
+    padding: 12px;
+  }
+  
+  .calendar-day {
+    font-size: 14px;
+  }
 }

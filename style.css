@@ -9,7 +9,6 @@
   --border: #e5e5ea;
 }
 
-/* ... общие стили, авторизация, хэдер, инпуты, нав-бар остаются почти без изменений ... */
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); padding-top: env(safe-area-inset-top); display: flex; flex-direction: column; min-height: 100vh; -webkit-user-select: none; user-select: none; }
 .screen { display: flex; flex-direction: column; flex: 1; width: 100%; }
@@ -39,87 +38,12 @@ button#add-btn:active { transform: scale(0.95); }
 .nav-item .icon { font-size: 22px; margin-bottom: 4px; }
 .nav-item.active { color: var(--accent); }
 
-/* === НОВЫЕ СТИЛИ ДЛЯ СВАЙПОВ === */
-
-ul#items-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 1px; /* Тонкий разделитель между карточками */
-}
-
-/* Контейнер для свайпа (LI) */
-li {
-  position: relative;
-  background-color: var(--bg-color);
-  overflow: hidden;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-}
-
-/* Видимая часть карточки, которая двигается */
-.swipe-content {
-  display: flex;
-  align-items: center;
-  padding: 18px 16px;
-  background: var(--card-bg);
-  position: relative;
-  z-index: 2;
-  touch-action: pan-y; /* Разрешает вертикальный скролл, блокируя горизонтальный */
-}
-/* Плавный возврат карточки на место */
-li:not(.is-swiping) .swipe-content {
-  transition: transform 0.3s ease;
-}
-
-/* Текст задачи */
-.item-text {
-  flex: 1;
-  font-size: 17px;
-  transition: color 0.2s;
-}
-.item-text.completed {
-  text-decoration: line-through;
-  color: var(--text-muted);
-}
-
-/* Фон, который появляется при свайпе */
-.swipe-actions {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: white;
-  font-weight: 600;
-}
-
-/* Зеленый блок "Готово" (справа) */
-.action-complete {
-  background-color: var(--color-complete);
-  padding: 0 30px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  position: absolute;
-  left: 0;
-  transform: translateX(-100%); /* Скрыт по умолчанию */
-}
-
-/* Красный блок "Удалить" (слева) */
-.action-delete {
-  background-color: var(--color-delete);
-  padding: 0 30px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  position: absolute;
-  right: 0;
-  transform: translateX(100%); /* Скрыт по умолчанию */
-}
+ul#items-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+li { position: relative; background-color: var(--card-bg); overflow: hidden; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.swipe-content { display: flex; align-items: center; padding: 18px 16px; background: var(--card-bg); position: relative; z-index: 2; touch-action: pan-y; cursor: grab; }
+li:not(.is-swiping) .swipe-content { transition: transform 0.3s ease; }
+.item-text { flex: 1; font-size: 17px; transition: color 0.2s; }
+.item-text.completed { text-decoration: line-through; color: var(--text-muted); }
+.swipe-actions { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; color: white; font-weight: 600; }
+.action-complete { background-color: var(--color-complete); padding: 0 30px; height: 100%; display: flex; align-items: center; justify-content: flex-start; position: absolute; left: 0; transform: translateX(-100%); }
+.action-delete { background-color: var(--color-delete); padding: 0 30px; height: 100%; display: flex; align-items: center; justify-content: flex-end; position: absolute; right: 0; transform: translateX(100%); }

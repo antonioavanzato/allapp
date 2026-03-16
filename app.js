@@ -1,12 +1,8 @@
-// Версия приложения для кэширования
-const APP_VERSION = '1.1.0';
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
-// ВАШ КОНФИГ
 const firebaseConfig = {
   apiKey: "AIzaSyAICtDB0Rie_2W2DAoX0MOJm7kDSbTAEUA",
   authDomain: "allapp-16e47.firebaseapp.com",
@@ -16,13 +12,11 @@ const firebaseConfig = {
   appId: "1:492414694516:web:f4fa51805c05e6c545cd21"
 };
 
-// Инициализация
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const messaging = getMessaging(app);
 
-// DOM Элементы (добавляем новые)
 const authScreen = document.getElementById('auth-screen');
 const mainApp = document.getElementById('main-app');
 const emailInput = document.getElementById('email-input');
@@ -38,147 +32,53 @@ const pageTitle = document.getElementById('page-title');
 const navItems = document.querySelectorAll('.nav-item');
 const listTitle = document.getElementById('list-title');
 const emptyState = document.getElementById('empty-state');
-// Новые элементы для уведомлений
-const notificationBell = document.createElement('div');
-notificationBell.className = 'notification-bell hidden';
-notificationBell.innerHTML = '🔔';
-document.querySelector('.header').appendChild(notificationBell);
 
 let currentTab = 'shopping';
 let unsubscribe = null;
 let currentUser = null;
-let notificationPermission = false;
 
-// Запрос разрешения на уведомления при входе
 async function setupNotifications() {
-  if (!('Notification' in window)) {
-    console.log('Браузер не поддерживает уведомления');
-    return;
-  }
-
-  try {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      notificationPermission = true;
-      
-      // Получаем токен устройства
-      const token = await getToken(messaging, {
-        vapidKey: 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q' // Пока оставьте так, потом добавим
-      });
-      
-      console.log('Токен для уведомлений:', token);
-      
-      // Сохраняем токен в Firestore (если нужно)
-      if (currentUser && token) {
-        // Здесь можно сохранить токен в базу
-        console.log('Токен сохранен для пользователя:', currentUser.uid);
-      }
-    }
-  } catch (error) {
-    console.log('Ошибка при запросе уведомлений:', error);
-  }
-}
-
-// Сохранение токена в Firestore через Cloud Function
-async function saveTokenToServer(token) {
-  if (!currentUser) return;
+  if (!('Notification' in window)) return;
   
   try {
-    // Получаем функцию из Firebase
-    const functions = getFunctions(app);
-    const saveTokenFunction = httpsCallable(functions, 'saveUserToken');
-    
-    const result = await saveTokenFunction({ token });
-    console.log('Токен сохранен на сервере:', result.data);
-  } catch (error) {
-    console.log('Ошибка сохранения токена:', error);
-    
-    // Альтернатива: сохраняем напрямую в Firestore
-    try {
-      const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
-        fcmTokens: arrayUnion(token)
-      });
-    } catch (e) {
-      console.log('Не удалось сохранить токен:', e);
-    }
-  }
-}
-
-// Обновите setupNotifications
-async function setupNotifications() {
-  if (!('Notification' in window)) {
-    console.log('Браузер не поддерживает уведомления');
-    return;
-  }
-
-  try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      notificationPermission = true;
-      
-      // Получаем токен устройства
       const token = await getToken(messaging, {
-        vapidKey: 'BGz2...' // Ваш VAPID ключ из консоли Firebase
+        vapidKey: 'BGz2GcA-qvKY2ZcGX-lMFKhzQl9FmEv8zux_BFcHyBc4YqCMs0FhYkhCSDgSmTdD-TBz-ovp4E1JXeH7cPeGGvM'
       });
       
-      console.log('Токен для уведомлений:', token);
-      
-      // Сохраняем токен
       if (currentUser && token) {
-        await saveTokenToServer(token);
+        const userRef = doc(db, 'users', currentUser.uid);
+        await updateDoc(userRef, {
+          fcmTokens: arrayUnion(token)
+        }).catch(() => {
+          // Если документа нет, создаем
+          setDoc(userRef, { fcmTokens: [token] }, { merge: true });
+        });
       }
     }
   } catch (error) {
-    console.log('Ошибка при запросе уведомлений:', error);
+    console.log('Ошибка уведомлений:', error);
   }
 }
 
-// Слушаем уведомления, когда приложение открыто
 onMessage(messaging, (payload) => {
-  console.log('Получено уведомление:', payload);
-  // Показываем уведомление через наш интерфейс
-  showInAppNotification(payload.notification);
+  console.log('Уведомление:', payload);
+  if (Notification.permission === 'granted') {
+    new Notification(payload.notification?.title || 'AllApp', {
+      body: payload.notification?.body || '',
+      icon: '/icons/icon-192.png'
+    });
+  }
 });
 
-// Функция для показа уведомления внутри приложения
-function showInAppNotification(notification) {
-  notificationBell.classList.remove('hidden');
-  notificationBell.textContent = `🔔 ${notification?.title || 'Новое'}`;
-  
-  setTimeout(() => {
-    notificationBell.classList.add('hidden');
-  }, 5000);
-}
-
-// Модифицируем функцию addItem для отправки уведомлений
-async function addItem() {
-  const text = itemInput.value.trim();
-  if (!text || !currentUser) return;
-  itemInput.value = '';
-  
-  // Добавляем элемент в Firestore
-  const docRef = await addDoc(getUserCollection(), {
-    text: text,
-    completed: false,
-    createdAt: serverTimestamp()
-  });
-  
-  // Отправляем уведомление (если есть подписка)
-  if (notificationPermission) {
-    // Здесь мы позже добавим вызов сервера для уведомлений
-    console.log('Новый элемент добавлен:', text);
-  }
-}
-
-// Следим за авторизацией
 onAuthStateChanged(auth, (user) => {
   if (user) {
     currentUser = user;
     authScreen.classList.add('hidden');
     mainApp.classList.remove('hidden');
     loadData();
-    setupNotifications(); // Запрашиваем разрешение при входе
+    setupNotifications();
   } else {
     currentUser = null;
     if (unsubscribe) unsubscribe();
@@ -188,10 +88,6 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// ДАЛЬШЕ ВЕСЬ ОСТАЛЬНОЙ ВАШ КОД БЕЗ ИЗМЕНЕНИЙ
-// ... (loginBtn, registerBtn, logoutBtn, loadData, renderItem, навигация)
-
-// Логика входа
 loginBtn.addEventListener('click', async () => {
   try {
     authError.textContent = '';
@@ -212,7 +108,6 @@ registerBtn.addEventListener('click', async () => {
 
 logoutBtn.addEventListener('click', () => signOut(auth));
 
-// Работа с данными
 function getUserCollection() {
   return collection(db, 'users', currentUser.uid, currentTab);
 }
@@ -245,7 +140,6 @@ function loadData() {
   });
 }
 
-// Отрисовка с жестами
 function renderItem(id, item) {
   const li = document.createElement('li');
   li.innerHTML = `
@@ -274,7 +168,6 @@ function renderItem(id, item) {
     if (!isSwiping) return;
     currentX = getX(e);
     translateX = currentX - startX;
-    // Ограничение свайпа
     if (translateX > 120) translateX = 120;
     if (translateX < -120) translateX = -120;
     swipeContent.style.transform = `translateX(${translateX}px)`;
@@ -286,11 +179,9 @@ function renderItem(id, item) {
     li.classList.remove('is-swiping');
 
     if (translateX > threshold) {
-      // Вправо - Готово
       const docRef = doc(db, 'users', currentUser.uid, currentTab, id);
       await updateDoc(docRef, { completed: !item.completed });
     } else if (translateX < -threshold) {
-      // Влево - Удалить
       li.style.transition = 'all 0.3s ease';
       li.style.transform = 'translateX(-100%)';
       li.style.opacity = '0';
@@ -311,7 +202,6 @@ function renderItem(id, item) {
   itemsList.appendChild(li);
 }
 
-// Навигация
 navItems.forEach(nav => {
   nav.addEventListener('click', () => {
     navItems.forEach(n => n.classList.remove('active'));

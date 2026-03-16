@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
 const firebaseConfig = {
@@ -21,6 +21,7 @@ const authScreen = document.getElementById('auth-screen');
 const mainApp = document.getElementById('main-app');
 const emailInput = document.getElementById('email-input');
 const passwordInput = document.getElementById('password-input');
+const nameInput = document.getElementById('name-input');
 const loginBtn = document.getElementById('login-btn');
 const registerBtn = document.getElementById('register-btn');
 const logoutBtn = document.getElementById('logout-btn');
@@ -37,13 +38,23 @@ let currentTab = 'shopping';
 let unsubscribe = null;
 let currentUser = null;
 
-// Функция для показа уведомления
-function showNotification(title, body) {
-  if (!('Notification' in window)) {
-    console.log('Браузер не поддерживает уведомления');
-    return;
-  }
+// Словарь для преобразования email в имена
+const userNames = {
+  'antonioavanzato@gmail.com': 'Антон',
+  'style_of_live@gmail.com': 'Алина'
+};
 
+// Показываем/скрываем поле имени
+loginBtn.addEventListener('click', () => {
+  nameInput.style.display = 'none';
+});
+
+registerBtn.addEventListener('click', () => {
+  nameInput.style.display = 'block';
+});
+
+function showNotification(title, body) {
+  if (!('Notification' in window)) return;
   if (Notification.permission === 'granted') {
     new Notification(title, {
       body: body,
@@ -54,7 +65,6 @@ function showNotification(title, body) {
   }
 }
 
-// Настройка уведомлений через Firebase
 const setupFirebaseNotifications = async () => {
   if (!('Notification' in window)) return;
   
@@ -79,29 +89,42 @@ const setupFirebaseNotifications = async () => {
   }
 };
 
-// Слушаем входящие уведомления от Firebase
 onMessage(messaging, (payload) => {
-  console.log('Получено уведомление от Firebase:', payload);
+  console.log('Уведомление:', payload);
   showNotification(
     payload.notification?.title || 'AllApp',
     payload.notification?.body || ''
   );
 });
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    currentUser = user;
-    authScreen.classList.add('hidden');
-    mainApp.classList.remove('hidden');
-    loadData();
-    // Запрашиваем уведомления после входа
-    setTimeout(() => setupFirebaseNotifications(), 1000);
-  } else {
-    currentUser = null;
-    if (unsubscribe) unsubscribe();
-    mainApp.classList.add('hidden');
-    authScreen.classList.remove('hidden');
-    itemsList.innerHTML = '';
+registerBtn.addEventListener('click', async () => {
+  const email = emailInput.value;
+  const password = passwordInput.value;
+  const name = nameInput.value.trim() || email.split('@')[0];
+  
+  if (!email || !password) {
+    authError.textContent = 'Заполните email и пароль';
+    return;
+  }
+  
+  try {
+    authError.textContent = '';
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    await updateProfile(user, { displayName: name });
+    
+    await setDoc(doc(db, 'users', user.uid), {
+      name: name,
+      email: email,
+      createdAt: serverTimestamp()
+    });
+    
+    console.log('Пользователь создан с именем:', name);
+    
+  } catch (error) {
+    console.error('Ошибка регистрации:', error);
+    authError.textContent = 'Ошибка регистрации: ' + error.message;
   }
 });
 
@@ -114,21 +137,31 @@ loginBtn.addEventListener('click', async () => {
   }
 });
 
-registerBtn.addEventListener('click', async () => {
-  try {
-    authError.textContent = '';
-    await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
-  } catch (error) {
-    authError.textContent = 'Ошибка регистрации.';
+logoutBtn.addEventListener('click', () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    currentUser = user;
+    authScreen.classList.add('hidden');
+    mainApp.classList.remove('hidden');
+    loadData();
+    setTimeout(() => setupFirebaseNotifications(), 1000);
+  } else {
+    currentUser = null;
+    if (unsubscribe) unsubscribe();
+    mainApp.classList.add('hidden');
+    authScreen.classList.remove('hidden');
+    itemsList.innerHTML = '';
+    nameInput.style.display = 'block';
+    nameInput.value = '';
   }
 });
 
-logoutBtn.addEventListener('click', () => signOut(auth));
+function getUserDisplayName(email) {
+  return userNames[email] || email.split('@')[0];
+}
 
-// ========== ИСПРАВЛЕННАЯ ЧАСТЬ ==========
-// Функция для получения ссылки на общую коллекцию
 function getFamilyCollection() {
-  // Правильный путь: коллекция 'family' → документ 'shared' → коллекция currentTab
   return collection(db, 'family', 'shared', currentTab);
 }
 
@@ -143,13 +176,12 @@ async function addItem() {
       completed: false,
       createdAt: serverTimestamp(),
       createdBy: currentUser.email,
-      createdByName: currentUser.email.split('@')[0]
+      createdByName: getUserDisplayName(currentUser.email)
     });
     
     showNotification('✅ Добавлено', `${text}`);
   } catch (error) {
     console.error('Ошибка при добавлении:', error);
-    showNotification('❌ Ошибка', 'Не удалось добавить');
   }
 }
 
@@ -173,18 +205,20 @@ function loadData() {
           renderItem(docSnap.id, docSnap.data());
         });
       }
-    }, (error) => {
-      console.error('Ошибка загрузки:', error);
     });
   } catch (error) {
-    console.error('Ошибка:', error);
+    console.error('Ошибка загрузки:', error);
   }
 }
 
 function renderItem(id, item) {
   const li = document.createElement('li');
   
-  const userInfo = item.createdByName ? ` (${item.createdByName})` : '';
+  // Получаем имя для отображения
+  let displayName = '';
+  if (item.createdBy) {
+    displayName = getUserDisplayName(item.createdBy);
+  }
   
   li.innerHTML = `
     <div class="swipe-actions">
@@ -192,7 +226,10 @@ function renderItem(id, item) {
       <div class="action-delete">Удалить</div>
     </div>
     <div class="swipe-content">
-      <span class="item-text ${item.completed ? 'completed' : ''}">${item.text}${userInfo}</span>
+      <span class="item-text ${item.completed ? 'completed' : ''}">
+        ${item.text}
+        ${displayName ? `<span class="user-name">(${displayName})</span>` : ''}
+      </span>
     </div>
   `;
 
@@ -224,19 +261,15 @@ function renderItem(id, item) {
 
     try {
       if (translateX > threshold) {
-        // СВАЙП ВПРАВО
         const docRef = doc(db, 'family', 'shared', currentTab, id);
-        await updateDoc(docRef, { 
-          completed: !item.completed 
-        });
+        await updateDoc(docRef, { completed: !item.completed });
         
         showNotification(
-          !item.completed ? '✅ Выполнено' : '↩️ Возвращено', 
+          !item.completed ? '✅ Выполнено' : '↩️ Возвращено',
           item.text
         );
         
       } else if (translateX < -threshold) {
-        // СВАЙП ВЛЕВО
         li.style.transition = 'all 0.3s ease';
         li.style.transform = 'translateX(-100%)';
         li.style.opacity = '0';
@@ -250,7 +283,7 @@ function renderItem(id, item) {
         swipeContent.style.transform = 'translateX(0px)';
       }
     } catch (error) {
-      console.error('Ошибка при обработке свайпа:', error);
+      console.error('Ошибка:', error);
       swipeContent.style.transform = 'translateX(0px)';
     }
     
@@ -279,37 +312,39 @@ navItems.forEach(nav => {
   });
 });
 
-// Функция для миграции (можно вызвать из консоли)
-window.migrateToFamily = async function() {
+// Функция для обновления старых записей (запустите один раз)
+window.updateOldItems = async function() {
   const user = auth.currentUser;
   if (!user) {
-    console.log('Сначала войдите в приложение');
+    console.log('Сначала войдите');
     return;
   }
   
   try {
-    // Переносим покупки
-    const shoppingSnap = await getDocs(collection(db, 'users', user.uid, 'shopping'));
+    // Обновляем покупки
+    const shoppingSnap = await getDocs(collection(db, 'family', 'shared', 'shopping'));
     for (const docItem of shoppingSnap.docs) {
-      await setDoc(doc(db, 'family', 'shared', 'shopping', docItem.id), {
-        ...docItem.data(),
-        createdBy: user.email,
-        createdByName: user.email.split('@')[0]
-      });
+      const data = docItem.data();
+      if (data.createdBy && !data.createdByName) {
+        await updateDoc(doc(db, 'family', 'shared', 'shopping', docItem.id), {
+          createdByName: getUserDisplayName(data.createdBy)
+        });
+      }
     }
     
-    // Переносим задачи
-    const tasksSnap = await getDocs(collection(db, 'users', user.uid, 'tasks'));
+    // Обновляем задачи
+    const tasksSnap = await getDocs(collection(db, 'family', 'shared', 'tasks'));
     for (const docItem of tasksSnap.docs) {
-      await setDoc(doc(db, 'family', 'shared', 'tasks', docItem.id), {
-        ...docItem.data(),
-        createdBy: user.email,
-        createdByName: user.email.split('@')[0]
-      });
+      const data = docItem.data();
+      if (data.createdBy && !data.createdByName) {
+        await updateDoc(doc(db, 'family', 'shared', 'tasks', docItem.id), {
+          createdByName: getUserDisplayName(data.createdBy)
+        });
+      }
     }
     
-    console.log('✅ Данные перенесены!');
+    console.log('✅ Старые записи обновлены с именами');
   } catch (error) {
-    console.error('Ошибка при миграции:', error);
+    console.error('Ошибка:', error);
   }
 };

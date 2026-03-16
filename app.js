@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
 const firebaseConfig = {
@@ -21,9 +21,7 @@ const authScreen = document.getElementById('auth-screen');
 const mainApp = document.getElementById('main-app');
 const emailInput = document.getElementById('email-input');
 const passwordInput = document.getElementById('password-input');
-const nameInput = document.getElementById('name-input');
 const loginBtn = document.getElementById('login-btn');
-const registerBtn = document.getElementById('register-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const authError = document.getElementById('auth-error');
 const itemsList = document.getElementById('items-list');
@@ -54,15 +52,6 @@ function getUserDisplayName(email) {
   if (userNames[emailWithoutDomain]) return userNames[emailWithoutDomain];
   return emailWithoutDomain;
 }
-
-// Управление полем имени
-loginBtn.addEventListener('click', () => {
-  if (nameInput) nameInput.style.display = 'none';
-});
-
-registerBtn.addEventListener('click', () => {
-  if (nameInput) nameInput.style.display = 'block';
-});
 
 function showNotification(title, body) {
   if (!('Notification' in window)) return;
@@ -102,37 +91,6 @@ function scrollToNewItem() {
     }
   }, 100);
 }
-
-// Регистрация
-registerBtn.addEventListener('click', async () => {
-  const email = emailInput?.value;
-  const password = passwordInput?.value;
-  const name = nameInput?.value.trim() || email?.split('@')[0] || '';
-  
-  if (!email || !password) {
-    if (authError) authError.textContent = 'Заполните email и пароль';
-    return;
-  }
-  
-  try {
-    if (authError) authError.textContent = '';
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    
-    if (user) {
-      await updateProfile(user, { displayName: name });
-      await setDoc(doc(db, 'users', user.uid), {
-        name: name,
-        email: email,
-        createdAt: serverTimestamp()
-      });
-      console.log('Пользователь создан:', name);
-    }
-  } catch (error) {
-    console.error('Ошибка регистрации:', error);
-    if (authError) authError.textContent = 'Ошибка регистрации: ' + error.message;
-  }
-});
 
 // Вход
 loginBtn.addEventListener('click', async () => {
@@ -181,10 +139,6 @@ onAuthStateChanged(auth, (user) => {
     if (mainApp) mainApp.classList.add('hidden');
     if (authScreen) authScreen.classList.remove('hidden');
     if (itemsList) itemsList.innerHTML = '';
-    if (nameInput) {
-      nameInput.style.display = 'block';
-      nameInput.value = '';
-    }
   }
 });
 

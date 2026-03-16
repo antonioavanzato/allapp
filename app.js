@@ -356,3 +356,23 @@ navItems.forEach(nav => {
     if (currentUser) loadData();
   });
 });
+
+// Сворачивание блока быстрых продуктов
+const quickToggle = document.getElementById('quick-toggle');
+const quickGrid = document.getElementById('quick-grid');
+const quickArrow = document.getElementById('quick-arrow');
+
+if (quickToggle && quickGrid && quickArrow) {
+  let isQuickExpanded = true; // по умолчанию развернут
+
+  quickToggle.addEventListener('click', () => {
+    if (isQuickExpanded) {
+      quickGrid.classList.add('collapsed');
+      quickArrow.classList.add('collapsed');
+    } else {
+      quickGrid.classList.remove('collapsed');
+      quickArrow.classList.remove('collapsed');
+    }
+    isQuickExpanded = !isQuickExpanded;
+  });
+}

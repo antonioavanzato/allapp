@@ -38,17 +38,11 @@ let currentTab = 'shopping';
 let unsubscribe = null;
 let currentUser = null;
 
-// Словарь для преобразования email в имена (с разными вариантами)
+// Словарь для преобразования email в имена
 const userNames = {
-  // Точные email'ы
   'antonioavanzato@gmail.com': 'Антон',
   'style_of_live@gmail.com': 'Даша',
-  
-  // Без @gmail.com
   'antonioavanzato': 'Антон',
-  'style_of_live': 'Даша',
-  
-  // С нижними подчеркиваниями
   'style_of_live': 'Даша'
 };
 
@@ -56,18 +50,15 @@ const userNames = {
 function getUserDisplayName(email) {
   if (!email) return '';
   
-  // Пробуем найти точное совпадение
   if (userNames[email]) {
     return userNames[email];
   }
   
-  // Пробуем найти без домена
   const emailWithoutDomain = email.split('@')[0];
   if (userNames[emailWithoutDomain]) {
     return userNames[emailWithoutDomain];
   }
   
-  // Если ничего не нашли, возвращаем часть email
   return emailWithoutDomain;
 }
 
@@ -211,6 +202,28 @@ async function addItem() {
 addBtn.addEventListener('click', addItem);
 itemInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addItem(); });
 
+// Обработчики для быстрых продуктов
+document.querySelectorAll('.quick-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const product = btn.dataset.product;
+    if (!product || !currentUser) return;
+    
+    try {
+      await addDoc(getFamilyCollection(), {
+        text: product,
+        completed: false,
+        createdAt: serverTimestamp(),
+        createdBy: currentUser.email,
+        createdByName: getUserDisplayName(currentUser.email)
+      });
+      
+      showNotification('✅ Добавлено', product);
+    } catch (error) {
+      console.error('Ошибка:', error);
+    }
+  });
+});
+
 function loadData() {
   if (unsubscribe) unsubscribe();
   
@@ -237,13 +250,10 @@ function loadData() {
 function renderItem(id, item) {
   const li = document.createElement('li');
   
-  // Получаем имя для отображения
   let displayName = '';
   if (item.createdByName) {
-    // Если есть сохраненное имя, используем его
     displayName = item.createdByName;
   } else if (item.createdBy) {
-    // Если нет имени, но есть email, получаем имя
     displayName = getUserDisplayName(item.createdBy);
   }
   
@@ -339,7 +349,7 @@ navItems.forEach(nav => {
   });
 });
 
-// Улучшенная функция для принудительного обновления всех записей
+// Функции для отладки
 window.forceUpdateNames = async function() {
   const user = auth.currentUser;
   if (!user) {
@@ -350,7 +360,6 @@ window.forceUpdateNames = async function() {
   console.log('🔄 Начинаем обновление всех записей...');
   
   try {
-    // Обновляем покупки
     const shoppingSnap = await getDocs(collection(db, 'family', 'shared', 'shopping'));
     let shoppingCount = 0;
     
@@ -358,14 +367,12 @@ window.forceUpdateNames = async function() {
       const data = docItem.data();
       const properName = getUserDisplayName(data.createdBy);
       
-      // Принудительно обновляем поле createdByName
       await updateDoc(doc(db, 'family', 'shared', 'shopping', docItem.id), {
         createdByName: properName
       });
       shoppingCount++;
     }
     
-    // Обновляем задачи
     const tasksSnap = await getDocs(collection(db, 'family', 'shared', 'tasks'));
     let tasksCount = 0;
     
@@ -387,7 +394,6 @@ window.forceUpdateNames = async function() {
   }
 };
 
-// Функция для проверки текущих имен
 window.checkNames = async function() {
   console.log('📋 Текущие имена в базе:');
   

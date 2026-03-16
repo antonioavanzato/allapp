@@ -33,6 +33,7 @@ const pageTitle = document.getElementById('page-title');
 const navItems = document.querySelectorAll('.nav-item');
 const listTitle = document.getElementById('list-title');
 const emptyState = document.getElementById('empty-state');
+const quickContainer = document.getElementById('quick-products-container'); // Контейнер быстрых продуктов
 
 let currentTab = 'shopping';
 let unsubscribe = null;
@@ -265,7 +266,7 @@ function renderItem(id, item) {
     <div class="swipe-content">
       <span class="item-text ${item.completed ? 'completed' : ''}">
         ${item.text}
-        ${displayName ? `<span class="user-name">(${displayName})</span>` : ''}
+        ${displayName ? `<span class="user-name">${displayName}</span>` : ''}
       </span>
     </div>
   `;
@@ -343,8 +344,18 @@ navItems.forEach(nav => {
     nav.classList.add('active');
     currentTab = nav.dataset.tab;
     pageTitle.textContent = currentTab === 'shopping' ? 'Покупки' : 'Задачи';
-    listTitle.textContent = currentTab === 'shopping' ? 'Список покупок' : 'Все задачи';
+    listTitle.textContent = currentTab === 'shopping' ? 'Список покупок' : 'Список задач';
     itemInput.placeholder = currentTab === 'shopping' ? 'Что купить?..' : 'Новая задача...';
+    
+    // ПОКАЗЫВАЕМ или СКРЫВАЕМ быстрые продукты
+    if (quickContainer) {
+      if (currentTab === 'shopping') {
+        quickContainer.style.display = 'block';
+      } else {
+        quickContainer.style.display = 'none';
+      }
+    }
+    
     if (currentUser) loadData();
   });
 });

@@ -41,7 +41,7 @@ let currentUser = null;
 // Словарь для преобразования email в имена
 const userNames = {
   'antonioavanzato@gmail.com': 'Антон',
-  'style_of_live@gmail.com': 'Дашаа'
+  'style_of_live@gmail.com': 'Даша'
 };
 
 // Показываем/скрываем поле имени
@@ -157,8 +157,17 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ ИМЕНИ
 function getUserDisplayName(email) {
-  return userNames[email] || email.split('@')[0];
+  if (!email) return '';
+  
+  // Сначала проверяем по словарю
+  if (userNames[email]) {
+    return userNames[email];
+  }
+  
+  // Если нет в словаре, берем часть email
+  return email.split('@')[0];
 }
 
 function getFamilyCollection() {
@@ -211,12 +220,17 @@ function loadData() {
   }
 }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ОТОБРАЖЕНИЯ
 function renderItem(id, item) {
   const li = document.createElement('li');
   
-  // Получаем имя для отображения
+  // ПОЛУЧАЕМ ИМЯ - сначала проверяем createdByName, потом createdBy
   let displayName = '';
-  if (item.createdBy) {
+  if (item.createdByName) {
+    // Если есть сохраненное имя, используем его
+    displayName = item.createdByName;
+  } else if (item.createdBy) {
+    // Если нет имени, но есть email, получаем имя из словаря
     displayName = getUserDisplayName(item.createdBy);
   }
   
@@ -312,7 +326,7 @@ navItems.forEach(nav => {
   });
 });
 
-// Функция для обновления старых записей (запустите один раз)
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ СТАРЫХ ЗАПИСЕЙ
 window.updateOldItems = async function() {
   const user = auth.currentUser;
   if (!user) {
@@ -321,29 +335,44 @@ window.updateOldItems = async function() {
   }
   
   try {
+    console.log('Начинаем обновление старых записей...');
+    
     // Обновляем покупки
     const shoppingSnap = await getDocs(collection(db, 'family', 'shared', 'shopping'));
+    let shoppingCount = 0;
+    
     for (const docItem of shoppingSnap.docs) {
       const data = docItem.data();
-      if (data.createdBy && !data.createdByName) {
+      const properName = getUserDisplayName(data.createdBy);
+      
+      // Обновляем, если имя не совпадает или отсутствует
+      if (data.createdByName !== properName) {
         await updateDoc(doc(db, 'family', 'shared', 'shopping', docItem.id), {
-          createdByName: getUserDisplayName(data.createdBy)
+          createdByName: properName
         });
+        shoppingCount++;
       }
     }
     
     // Обновляем задачи
     const tasksSnap = await getDocs(collection(db, 'family', 'shared', 'tasks'));
+    let tasksCount = 0;
+    
     for (const docItem of tasksSnap.docs) {
       const data = docItem.data();
-      if (data.createdBy && !data.createdByName) {
+      const properName = getUserDisplayName(data.createdBy);
+      
+      if (data.createdByName !== properName) {
         await updateDoc(doc(db, 'family', 'shared', 'tasks', docItem.id), {
-          createdByName: getUserDisplayName(data.createdBy)
+          createdByName: properName
         });
+        tasksCount++;
       }
     }
     
-    console.log('✅ Старые записи обновлены с именами');
+    console.log(`✅ Обновлено покупок: ${shoppingCount}, задач: ${tasksCount}`);
+    console.log('Теперь обновите страницу (F5)');
+    
   } catch (error) {
     console.error('Ошибка:', error);
   }

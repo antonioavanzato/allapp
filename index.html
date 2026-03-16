@@ -1,1 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <!-- Настройки для iOS и PWA -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f2f2f7">
+  
+  <title>AllApp</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+  <header class="header">
+    <h1 id="page-title">Задачи</h1>
+  </header>
+
+  <main class="content">
+    <div class="input-group">
+      <input type="text" id="item-input" placeholder="Добавить новую запись..." autocomplete="off">
+      <button id="add-btn">+</button>
+    </div>
+
+    <ul id="items-list">
+      <!-- Элементы будут добавляться сюда через JS -->
+    </ul>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="tasks">
+      <span class="icon">✓</span>
+      <span>Задачи</span>
+    </button>
+    <button class="nav-item" data-tab="shopping">
+      <span class="icon">🛒</span>
+      <span>Покупки</span>
+    </button>
+  </nav>
+
+  <!-- Подключаем логику как модуль -->
+  <script type="module" src="app.js"></script>
+  
+  <!-- Регистрация Service Worker для PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>

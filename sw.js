@@ -39,7 +39,6 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Обработка push-уведомлений
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   
@@ -50,7 +49,7 @@ self.addEventListener('push', (event) => {
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       data: data.data || {},
-      actions: data.actions || [
+      actions: [
         { action: 'open', title: 'Открыть' }
       ]
     };
@@ -62,6 +61,6 @@ self.addEventListener('push', (event) => {
       )
     );
   } catch (error) {
-    console.error('Ошибка при показе уведомления:', error);
+    console.error('Ошибка:', error);
   }
 });

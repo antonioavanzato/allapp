@@ -1,5 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, setDoc, getDocs, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+  getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, 
+  serverTimestamp, arrayUnion, setDoc, getDocs, where, getDoc 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
@@ -43,9 +46,9 @@ const currentMonthSpan = document.getElementById('current-month');
 const prevMonthBtn = document.getElementById('prev-month');
 const nextMonthBtn = document.getElementById('next-month');
 
-let currentTab = 'shopping'; // shopping, tasks, albus
-let unsubscribe = null; // для списков покупок/задач
-let unsubscribeCalendar = null; // для календаря
+let currentTab = 'shopping';
+let unsubscribe = null;
+let unsubscribeCalendar = null;
 let currentUser = null;
 
 // Текущий месяц для календаря
@@ -382,22 +385,17 @@ function renderCalendar(year, month) {
   const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
   currentMonthSpan.textContent = `${monthNames[month]} ${year}`;
 
-  // Получаем первый день месяца (0 - понедельник? нам нужен понедельник первым)
+  // Получаем первый день месяца (0 - воскресенье, нам нужно смещение для понедельника)
   const firstDay = new Date(year, month, 1);
   let startDayOfWeek = firstDay.getDay(); // 0 = воскресенье, 1 = понедельник, ...
-  // Сдвигаем, чтобы понедельник был 0
-  let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // если воскресенье (0) -> смещение 6, иначе -1
+  let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   // Генерируем массив дней с пустыми ячейками в начале
   const daysArray = [];
-  for (let i = 0; i < startOffset; i++) {
-    daysArray.push(null); // пустая ячейка
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    daysArray.push(d);
-  }
+  for (let i = 0; i < startOffset; i++) daysArray.push(null);
+  for (let d = 1; d <= daysInMonth; d++) daysArray.push(d);
 
   // Запрашиваем отметки за этот месяц
   const startDateStr = `${year}-${String(month+1).padStart(2,'0')}-01`;
@@ -411,14 +409,12 @@ function renderCalendar(year, month) {
 
   if (unsubscribeCalendar) unsubscribeCalendar();
   unsubscribeCalendar = onSnapshot(q, (snapshot) => {
-    // Собираем отметки в объект { date: taken }
     const takenMap = {};
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
       takenMap[data.date] = data.taken;
     });
 
-    // Отрисовываем дни
     calendarDays.innerHTML = '';
     daysArray.forEach(day => {
       const dayDiv = document.createElement('div');
@@ -443,7 +439,7 @@ function renderCalendar(year, month) {
 async function handleDayClick(dateStr, dayElement) {
   if (!currentUser) return;
   
-  const docRef = doc(db, 'family', 'shared', 'albus', dateStr); // используем дату как ID документа
+  const docRef = doc(db, 'family', 'shared', 'albus', dateStr);
   try {
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
@@ -476,6 +472,3 @@ if (prevMonthBtn && nextMonthBtn) {
     renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
   });
 }
-
-// ---------- Инициализация ----------
-// При загрузке страницы активная вкладка уже установлена через onAuthStateChanged

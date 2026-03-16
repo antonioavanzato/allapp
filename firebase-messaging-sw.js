@@ -11,19 +11,30 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('Фоновое уведомление:', payload);
+// ⚠️ ВАЖНО: Не вызываем messaging() и не используем onBackgroundMessage
+// Вместо этого — чистый push-обработчик
+
+self.addEventListener('push', function(event) {
+  console.log('🔥 Чистый push получен:', event);
   
-  const notificationTitle = payload.notification?.title || 'AllApp';
-  const notificationOptions = {
-    body: payload.notification?.body || 'Новое обновление',
+  let data = {};
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { title: 'AllApp', body: event.data.text() };
+    }
+  }
+
+  const title = data.notification?.title || data.title || 'AllApp';
+  const options = {
+    body: data.notification?.body || data.body || 'Новое обновление',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     data: {
-      url: payload.data?.url || '/',
-      type: payload.data?.type || 'shopping'
+      url: data.data?.url || '/',
+      type: data.data?.type || 'shopping'
     },
     actions: [
       { action: 'open', title: 'Открыть' },
@@ -31,9 +42,12 @@ messaging.onBackgroundMessage((payload) => {
     ]
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
 
+// Обработка клика по уведомлению (оставляем как есть)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   

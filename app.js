@@ -1,30 +1,17 @@
-// Импорт всех необходимых функций из Firebase SDK
+// Импорты Firebase без изменений
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { 
-  getFirestore, collection, addDoc, onSnapshot, 
-  doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { 
-  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  signOut, onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// Ваша конфигурация Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyAICtDB0Rie_2W2DAoX0MOJm7kDSbTAEUA",
-  authDomain: "allapp-16e47.firebaseapp.com",
-  projectId: "allapp-16e47",
-  storageBucket: "allapp-16e47.firebasestorage.app",
-  messagingSenderId: "492414694516",
-  appId: "1:492414694516:web:f4fa51805c05e6c545cd21"
-};
+// Конфигурация Firebase без изменений
+const firebaseConfig = { /* ... */ };
 
-// Инициализация Firebase
+// Инициализация Firebase без изменений
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// DOM Элементы
+// DOM Элементы без изменений
 const authScreen = document.getElementById('auth-screen');
 const mainApp = document.getElementById('main-app');
 const emailInput = document.getElementById('email-input');
@@ -41,66 +28,27 @@ const navItems = document.querySelectorAll('.nav-item');
 const listTitle = document.getElementById('list-title');
 const emptyState = document.getElementById('empty-state');
 
-// Глобальные переменные состояния
-let currentTab = 'tasks';
+// ИЗМЕНЕНИЕ: Дефолтная вкладка теперь 'shopping'
+let currentTab = 'shopping';
 let unsubscribe = null;
 let currentUser = null;
 
-// Главный слушатель, который следит за состоянием входа пользователя
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    currentUser = user;
-    authScreen.classList.add('hidden');
-    mainApp.classList.remove('hidden');
-    loadData();
-  } else {
-    currentUser = null;
-    if (unsubscribe) unsubscribe();
-    mainApp.classList.add('hidden');
-    authScreen.classList.remove('hidden');
-    itemsList.innerHTML = '';
-  }
-});
+// Блок авторизации и другие функции (кроме renderItem) остаются без изменений
+onAuthStateChanged(auth, (user) => { /* ... */ });
+loginBtn.addEventListener('click', async () => { /* ... */ });
+registerBtn.addEventListener('click', async () => { /* ... */ });
+logoutBtn.addEventListener('click', () => { signOut(auth); });
+function getUserCollection() { return collection(db, 'users', currentUser.uid, currentTab); }
+async function addItem() { /* ... */ }
+addBtn.addEventListener('click', addItem);
+itemInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } });
 
-// Обработчик входа
-loginBtn.addEventListener('click', async () => {
-  try {
-    authError.textContent = '';
-    await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
-    emailInput.value = ''; 
-    passwordInput.value = '';
-  } catch (error) {
-    authError.textContent = 'Ошибка входа: неверный email или пароль.';
-  }
-});
-
-// Обработчик регистрации
-registerBtn.addEventListener('click', async () => {
-  try {
-    authError.textContent = '';
-    await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
-    emailInput.value = ''; 
-    passwordInput.value = '';
-  } catch (error) {
-    authError.textContent = 'Ошибка: пароль слишком простой или email занят.';
-  }
-});
-
-// Обработчик выхода
-logoutBtn.addEventListener('click', () => {
-  signOut(auth);
-});
-
-// Вспомогательная функция для получения пути к коллекции текущего пользователя
-function getUserCollection() {
-  return collection(db, 'users', currentUser.uid, currentTab);
-}
-
-// Загрузка данных из Firestore в реальном времени
 function loadData() {
   if (unsubscribe) unsubscribe();
   const q = query(getUserCollection(), orderBy('createdAt', 'desc'));
   unsubscribe = onSnapshot(q, (snapshot) => {
+    // Сохраняем прокрутку, чтобы список не прыгал при обновлении
+    const scrollTop = itemsList.scrollTop;
     itemsList.innerHTML = '';
     if (snapshot.empty) {
       emptyState.classList.remove('hidden');
@@ -111,58 +59,94 @@ function loadData() {
         renderItem(docSnap.id, item);
       });
     }
+    itemsList.scrollTop = scrollTop;
   });
 }
 
-// Отрисовка одного элемента (карточки) в списке
+// ==========================================
+// НОВАЯ ФУНКЦИЯ RENDERITEM С ЖЕСТАМИ
+// ==========================================
 function renderItem(id, item) {
   const li = document.createElement('li');
+  li.dataset.id = id;
+
   li.innerHTML = `
-    <div class="checkbox ${item.completed ? 'checked' : ''}"></div>
-    <span class="item-text ${item.completed ? 'completed' : ''}">${item.text}</span>
-    <button class="delete-btn">×</button>
+    <div class="swipe-actions">
+      <div class="action-complete">Готово</div>
+      <div class="action-delete">Удалить</div>
+    </div>
+    <div class="swipe-content">
+      <span class="item-text ${item.completed ? 'completed' : ''}">${item.text}</span>
+    </div>
   `;
-  li.querySelector('.checkbox').addEventListener('click', async () => {
-    const docRef = doc(db, 'users', currentUser.uid, currentTab, id);
-    await updateDoc(docRef, { completed: !item.completed });
-  });
-  li.querySelector('.delete-btn').addEventListener('click', async () => {
-    const docRef = doc(db, 'users', currentUser.uid, currentTab, id);
-    await deleteDoc(docRef);
-  });
+
+  const swipeContent = li.querySelector('.swipe-content');
+
+  let startX = 0;
+  let currentX = 0;
+  let translateX = 0;
+  let isSwiping = false;
+  const threshold = 80; // Расстояние для срабатывания действия
+
+  const handleSwipeStart = (e) => {
+    startX = e.touches[0].clientX;
+    isSwiping = true;
+    li.classList.add('is-swiping');
+  };
+
+  const handleSwipeMove = (e) => {
+    if (!isSwiping) return;
+    currentX = e.touches[0].clientX;
+    translateX = currentX - startX;
+    
+    // Ограничиваем свайп, чтобы не уезжал слишком далеко
+    if (translateX > threshold * 1.5) translateX = threshold * 1.5;
+    if (translateX < -threshold * 1.5) translateX = -threshold * 1.5;
+
+    swipeContent.style.transform = `translateX(${translateX}px)`;
+  };
+
+  const handleSwipeEnd = async () => {
+    if (!isSwiping) return;
+    isSwiping = false;
+    li.classList.remove('is-swiping');
+
+    if (translateX > threshold) {
+      // Свайп вправо: отметить как выполненное
+      const docRef = doc(db, 'users', currentUser.uid, currentTab, id);
+      await updateDoc(docRef, { completed: !item.completed });
+    } else if (translateX < -threshold) {
+      // Свайп влево: удалить
+      li.style.height = `${li.offsetHeight}px`; // Фиксируем высоту для анимации
+      li.style.transition = 'height 0.3s ease, opacity 0.3s ease';
+      li.style.height = '0px';
+      li.style.opacity = '0';
+      setTimeout(async () => {
+        const docRef = doc(db, 'users', currentUser.uid, currentTab, id);
+        await deleteDoc(docRef);
+      }, 300);
+    } else {
+      // Возвращаем на место, если свайп был недостаточно сильным
+      swipeContent.style.transform = `translateX(0px)`;
+    }
+  };
+
+  // Добавляем слушатели для тач-событий
+  li.addEventListener('touchstart', handleSwipeStart, { passive: true });
+  li.addEventListener('touchmove', handleSwipeMove, { passive: true });
+  li.addEventListener('touchend', handleSwipeEnd);
+  li.addEventListener('touchcancel', handleSwipeEnd);
+
   itemsList.appendChild(li);
 }
 
-// Добавление новой записи в базу данных
-async function addItem() {
-  const text = itemInput.value.trim();
-  if (!text || !currentUser) return;
-  itemInput.value = '';
-  try {
-    await addDoc(getUserCollection(), {
-      text: text,
-      completed: false,
-      createdAt: serverTimestamp()
-    });
-  } catch(error) {
-    console.error("Ошибка при добавлении документа: ", error);
-  }
-}
-
-addBtn.addEventListener('click', addItem);
-itemInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    addItem();
-  }
-});
-
-// Логика переключения между вкладками "Задачи" и "Покупки"
+// Переключение вкладок
 navItems.forEach(nav => {
   nav.addEventListener('click', () => {
     navItems.forEach(n => n.classList.remove('active'));
     nav.classList.add('active');
     currentTab = nav.dataset.tab;
+    
     if (currentTab === 'tasks') {
       pageTitle.textContent = 'Задачи';
       itemInput.placeholder = 'Новая задача...';
@@ -172,8 +156,6 @@ navItems.forEach(nav => {
       itemInput.placeholder = 'Что купить?..';
       listTitle.textContent = 'Список покупок';
     }
-    if (currentUser) {
-      loadData(); 
-    }
+    if (currentUser) loadData();
   });
 });

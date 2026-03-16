@@ -596,6 +596,11 @@ li.swiping-left .swipe-content {
   border-color: var(--accent);
 }
 
+.coffee-input.small {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
 /* Числовые поля открывают цифровую клавиатуру */
 .coffee-input[type="number"] {
   -moz-appearance: textfield;
@@ -605,12 +610,6 @@ li.swiping-left .swipe-content {
 .coffee-input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
-}
-
-/* Поле даты — чёрный текст */
-#coffee-roast-date {
-  color: var(--text-main);
-  background: var(--bg-color);
 }
 
 .coffee-row {
@@ -623,7 +622,7 @@ li.swiping-left .swipe-content {
   flex: 2;
 }
 
-.coffee-current-date {
+.coffee-age {
   flex: 1;
   font-size: 14px;
   color: var(--text-muted);
@@ -632,6 +631,78 @@ li.swiping-left .swipe-content {
   border-radius: 12px;
   text-align: center;
   border: 1px solid var(--border);
+}
+
+/* График */
+.coffee-chart-container {
+  margin-top: 12px;
+  background: var(--bg-color);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.coffee-chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.coffee-chart {
+  width: 100%;
+  height: auto;
+  background: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.coffee-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-height: 40px;
+}
+
+.coffee-point-tag {
+  background: var(--accent);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.coffee-point-tag .remove-point {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.coffee-add-point {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.coffee-small-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .coffee-save-btn {

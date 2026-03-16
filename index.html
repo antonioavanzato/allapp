@@ -6,9 +6,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#f2f2f7">
-  <meta name="apple-mobile-web-app-title" content="AllApp">
+  <meta name="apple-mobile-web-app-title" content="НАШ ДОМ">
   
-  <title>НАШ ДОМ - Покупки и задачи</title>
+  <title>НАШ ДОМ - Покупки, задачи, Альбус</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
   
@@ -39,7 +39,7 @@
     </header>
 
     <main class="content">
-      <!-- Быстрые продукты (сворачиваемый блок) -->
+      <!-- Быстрые продукты (только для покупок) -->
       <div id="quick-products-container" class="quick-products-section">
         <div class="quick-header" id="quick-toggle">
           <h4 class="quick-title">Быстрое добавление</h4>
@@ -62,26 +62,33 @@
           <button class="quick-btn" data-product="Овсянка №2">Овсянка №2</button>
           <button class="quick-btn" data-product="Хлеб">Хлеб</button>
           <button class="quick-btn" data-product="Творожный сыр легкий">Творожный сыр легкий</button>
-          <button class="quick-btn" data-product="Сыр легкий">Сыр легкий</button>
-          <button class="quick-btn" data-product="Пакеты для мусора">Пакеты для мусора</button>
-          <button class="quick-btn" data-product="Пакеты обычные">Пакеты обычные</button>
-          <button class="quick-btn" data-product="Чай">Чай</button>
-          <button class="quick-btn" data-product="Имбирь">Имбирь</button>
-          <button class="quick-btn" data-product="Молоко 1.8%">Молоко 1.8%</button>
         </div>
       </div>
 
-      <!-- Поле ввода и кнопка добавления -->
-      <div class="input-group">
+      <!-- Поле ввода и кнопка добавления (для покупок и задач) -->
+      <div class="input-group" id="input-group">
         <input type="text" id="item-input" placeholder="Или введите вручную..." autocomplete="off">
         <button id="add-btn">+</button>
       </div>
 
-      <!-- Список -->
-      <div class="list-section">
+      <!-- Список (для покупок и задач) -->
+      <div class="list-section" id="list-section">
         <h3 id="list-title" class="list-section-title">Список покупок</h3>
         <ul id="items-list"></ul>
         <p id="empty-state" class="empty-state hidden">Здесь пока пусто</p>
+      </div>
+
+      <!-- Календарь для Альбуса -->
+      <div id="albus-calendar" class="calendar-container hidden">
+        <div class="calendar-header">
+          <button id="prev-month" class="calendar-nav">←</button>
+          <span id="current-month" class="calendar-month-year"></span>
+          <button id="next-month" class="calendar-nav">→</button>
+        </div>
+        <div class="calendar-weekdays">
+          <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+        </div>
+        <div class="calendar-days" id="calendar-days"></div>
       </div>
     </main>
 
@@ -90,6 +97,10 @@
       <button class="nav-item active" data-tab="shopping">
         <span class="icon">🛒</span>
         <span>Покупки</span>
+      </button>
+      <button class="nav-item" data-tab="albus">
+        <span class="icon">🐱</span>
+        <span>Альбус</span>
       </button>
       <button class="nav-item" data-tab="tasks">
         <span class="icon">✓</span>

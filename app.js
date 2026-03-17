@@ -513,7 +513,7 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-// Универсальная функция для рисования графика на канвасе
+// Универсальная функция для рисования графика на канвасе (яркая и контрастная)
 function drawChart(canvas, points) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -530,7 +530,7 @@ function drawChart(canvas, points) {
     return;
   }
 
-  // Сортируем точки по времени, чтобы график шёл слева направо
+  // Сортируем точки по времени
   const sortedPoints = [...points].sort((a, b) => a.time - b.time);
 
   // Отступы для осей
@@ -538,7 +538,6 @@ function drawChart(canvas, points) {
   const graphW = width - margin.left - margin.right;
   const graphH = height - margin.top - margin.bottom;
 
-  // Находим максимумы (если все нули, ставим 1)
   const maxTime = Math.max(...sortedPoints.map(p => p.time), 1);
   const maxWater = Math.max(...sortedPoints.map(p => p.water), 1);
 
@@ -551,9 +550,9 @@ function drawChart(canvas, points) {
   ctx.lineTo(width - margin.right, height - margin.bottom);
   ctx.stroke();
 
-  // Рисуем линию графика
-  ctx.strokeStyle = 'var(--accent)';
-  ctx.lineWidth = 2;
+  // Рисуем линию графика (ярко-оранжевая)
+  ctx.strokeStyle = '#ff9f0a';
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
   sortedPoints.forEach((p, i) => {
     const x = margin.left + (p.time / maxTime) * graphW;
@@ -563,13 +562,19 @@ function drawChart(canvas, points) {
   });
   ctx.stroke();
 
-  // Рисуем точки
-  ctx.fillStyle = 'var(--accent)';
+  // Рисуем точки (белая обводка + оранжевая заливка)
   sortedPoints.forEach(p => {
     const x = margin.left + (p.time / maxTime) * graphW;
     const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
+    
+    ctx.beginPath();
+    ctx.arc(x, y, 7, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    
     ctx.beginPath();
     ctx.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ff9f0a';
     ctx.fill();
   });
 
@@ -584,7 +589,7 @@ function drawChart(canvas, points) {
   ctx.fillText('Вода (мл)', 0, 0);
   ctx.restore();
 
-  // Подписи значений на осях (0 и максимумы)
+  // Подписи значений на осях
   ctx.font = '9px -apple-system';
   ctx.textAlign = 'right';
   ctx.fillStyle = 'var(--text-muted)';

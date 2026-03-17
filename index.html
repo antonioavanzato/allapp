@@ -125,7 +125,8 @@
               <!-- Список точек будет добавляться сюда -->
             </div>
             <div class="coffee-add-point">
-              <input type="number" id="point-time" placeholder="Время (сек)" class="coffee-input small" step="1" min="0">
+              <!-- ИЗМЕНЕНО: поле времени теперь текстовое с подсказкой мм:сс -->
+              <input type="text" id="point-time" placeholder="Время (мм:сс)" class="coffee-input small">
               <input type="number" id="point-water" placeholder="Вода (мл)" class="coffee-input small" step="1" min="0">
               <button id="add-point-btn" class="coffee-small-btn">+</button>
             </div>

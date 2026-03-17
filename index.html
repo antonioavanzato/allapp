@@ -35,7 +35,17 @@
   <div id="main-app" class="screen hidden">
     <header class="header">
       <h1 id="page-title">Покупки</h1>
-      <button id="logout-btn" class="text-btn">Выйти</button>
+      <div style="display: flex; gap: 8px; align-items: center;" id="header-shop-buttons">
+        <!-- Иконка магазина Магнит -->
+        <button id="qr-magnit-btn" class="qr-icon-btn" title="QR-код Магнит">
+          <img src="icons/magnit-logo.svg" alt="Магнит" style="width: 24px; height: 24px; border-radius: 4px;">
+        </button>
+        <!-- Иконка магазина Пятёрочка -->
+        <button id="qr-pyaterochka-btn" class="qr-icon-btn" title="QR-код Пятёрочка">
+          <img src="icons/pyaterochka-logo.svg" alt="Пятёрочка" style="width: 24px; height: 24px; border-radius: 4px;">
+        </button>
+        <button id="logout-btn" class="text-btn">Выйти</button>
+      </div>
     </header>
 
     <main class="content">

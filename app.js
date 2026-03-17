@@ -497,6 +497,27 @@ if (prevMonthBtn && nextMonthBtn) {
 
 // ---------- Кофе: рецепты ----------
 
+// Преобразование строки "мм:сс" в секунды
+function parseTimeString(str) {
+  if (!str) return 0;
+  const parts = str.split(':');
+  if (parts.length === 2) {
+    const minutes = parseInt(parts[0], 10) || 0;
+    const seconds = parseInt(parts[1], 10) || 0;
+    return minutes * 60 + seconds;
+  } else {
+    // Если просто число, считаем секундами
+    return parseInt(str, 10) || 0;
+  }
+}
+
+// Преобразование секунд в формат "мм:сс"
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
 // Вычисление возраста кофе
 function updateCoffeeAge() {
   const dateStr = coffeeRoastDate.value;
@@ -513,7 +534,7 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-// Универсальная функция для рисования графика с началом из (0,0)
+// Универсальная функция для рисования ступенчатого графика
 function drawChart(canvas, points) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -530,10 +551,10 @@ function drawChart(canvas, points) {
     return;
   }
 
-  // Сортируем точки по времени и добавляем неявную точку (0,0) в начало для корректного начала графика
+  // Сортируем точки по времени
   const sortedPoints = [...points].sort((a, b) => a.time - b.time);
-  // Если первая точка не (0,0), добавляем (0,0) в начало для отрисовки линии от нуля
-  const pointsForDrawing = (sortedPoints[0].time !== 0 || sortedPoints[0].water !== 0) 
+  // Добавляем неявную точку (0,0) для начала
+  const allPoints = (sortedPoints[0].time !== 0 || sortedPoints[0].water !== 0) 
     ? [{ time: 0, water: 0 }, ...sortedPoints] 
     : sortedPoints;
 
@@ -542,7 +563,7 @@ function drawChart(canvas, points) {
   const graphW = width - margin.left - margin.right;
   const graphH = height - margin.top - margin.bottom;
 
-  // Максимальные значения для масштабирования (только по реальным точкам, без добавленной (0,0))
+  // Максимальные значения (по реальным точкам, без учёта добавленного (0,0))
   const maxTime = Math.max(...sortedPoints.map(p => p.time), 1);
   const maxWater = Math.max(...sortedPoints.map(p => p.water), 1);
 
@@ -577,19 +598,31 @@ function drawChart(canvas, points) {
   ctx.lineTo(width - margin.right, height - margin.bottom);
   ctx.stroke();
 
-  // Рисуем линию графика (ярко-оранжевая) — используем pointsForDrawing, чтобы начать с (0,0)
+  // Рисуем ступенчатый график
   ctx.strokeStyle = '#ff9f0a';
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  pointsForDrawing.forEach((p, i) => {
-    const x = margin.left + (p.time / maxTime) * graphW;
-    const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
+  
+  for (let i = 0; i < allPoints.length - 1; i++) {
+    const p1 = allPoints[i];
+    const p2 = allPoints[i + 1];
+    
+    const x1 = margin.left + (p1.time / maxTime) * graphW;
+    const y1 = (height - margin.bottom) - (p1.water / maxWater) * graphH;
+    const x2 = margin.left + (p2.time / maxTime) * graphW;
+    const y2 = (height - margin.bottom) - (p2.water / maxWater) * graphH;
+    
+    // Горизонтальный сегмент от (x1, y1) до (x2, y1)
+    if (i === 0) {
+      ctx.moveTo(x1, y1);
+    }
+    ctx.lineTo(x2, y1);
+    // Вертикальный сегмент от (x2, y1) до (x2, y2)
+    ctx.lineTo(x2, y2);
+  }
   ctx.stroke();
 
-  // Рисуем точки (только реальные, без (0,0) — если хотим показывать точку в нуле, можно тоже нарисовать, но обычно не нужно)
+  // Рисуем точки (только реальные, без (0,0))
   ctx.fillStyle = '#ff9f0a';
   sortedPoints.forEach(p => {
     const x = margin.left + (p.time / maxTime) * graphW;
@@ -647,9 +680,10 @@ function renderPointsList() {
   if (!coffeePointsList) return;
   coffeePointsList.innerHTML = '';
   currentPoints.forEach((point, index) => {
+    const timeStr = formatTime(point.time);
     const tag = document.createElement('span');
     tag.className = 'coffee-point-tag';
-    tag.innerHTML = `${point.time}с / ${point.water}мл <button class="remove-point" data-index="${index}">✕</button>`;
+    tag.innerHTML = `${timeStr} / ${point.water}мл <button class="remove-point" data-index="${index}">✕</button>`;
     tag.querySelector('.remove-point').addEventListener('click', (e) => {
       e.stopPropagation();
       currentPoints.splice(index, 1);
@@ -661,15 +695,20 @@ function renderPointsList() {
   drawChart(coffeeChartCanvas, currentPoints);
 }
 
-// Добавление точки (для нового рецепта)
+// Добавление точки (для нового рецепта) с поддержкой формата мм:сс
 addPointBtn.addEventListener('click', () => {
-  const time = parseFloat(pointTimeInput.value);
+  const timeStr = pointTimeInput.value.trim();
   const water = parseFloat(pointWaterInput.value);
-  if (isNaN(time) || isNaN(water) || time < 0 || water < 0) {
+  if (!timeStr || isNaN(water) || water < 0) {
     showToast('Введите корректные значения', 'error');
     return;
   }
-  currentPoints.push({ time, water });
+  const timeSeconds = parseTimeString(timeStr);
+  if (isNaN(timeSeconds) || timeSeconds < 0) {
+    showToast('Некорректный формат времени', 'error');
+    return;
+  }
+  currentPoints.push({ time: timeSeconds, water });
   // Сортируем по времени, чтобы график был логичным
   currentPoints.sort((a, b) => a.time - b.time);
   pointTimeInput.value = '';
@@ -709,7 +748,7 @@ coffeeSaveBtn.addEventListener('click', async () => {
     grind: coffeeGrind.value ? parseInt(coffeeGrind.value) : null,
     temp: coffeeTemp.value ? parseFloat(coffeeTemp.value) : null,
     totalWater: coffeeWater.value ? parseInt(coffeeWater.value) : null,
-    points: currentPoints,
+    points: currentPoints, // массив { time, water }, где time в секундах
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
   };
@@ -739,12 +778,18 @@ function loadCoffeeRecipes() {
   }, error => console.error('Ошибка загрузки рецептов:', error));
 }
 
-// Отрисовка карточки рецепта (с графиком)
+// Отрисовка карточки рецепта (с графиком и отображением времени в формате мм:сс)
 function renderCoffeeRecipe(id, data) {
   const card = document.createElement('div');
   card.className = 'coffee-recipe-card';
   
   const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : 'не указана';
+  
+  // Форматируем точки для отображения в карточке
+  let pointsStr = '';
+  if (data.points && data.points.length > 0) {
+    pointsStr = data.points.map(p => `${formatTime(p.time)} / ${p.water}мл`).join(', ');
+  }
   
   // Создаём канвас для графика
   const canvasId = `chart-${id}`;
@@ -761,6 +806,7 @@ function renderCoffeeRecipe(id, data) {
       ${data.temp ? `<span>🌡️ ${data.temp}°C</span>` : ''}
       ${data.totalWater ? `<span>💧 ${data.totalWater}мл</span>` : ''}
     </div>
+    ${pointsStr ? `<div class="coffee-recipe-detail"><span>📊 ${pointsStr}</span></div>` : ''}
     <div style="margin: 8px 0;">
       <canvas id="${canvasId}" class="coffee-chart" width="300" height="150"></canvas>
     </div>
@@ -789,7 +835,6 @@ function renderCoffeeRecipe(id, data) {
   if (chartCanvas && data.points && data.points.length > 0) {
     drawChart(chartCanvas, data.points);
   } else if (chartCanvas) {
-    // Если точек нет, покажем "Нет данных"
     const ctx = chartCanvas.getContext('2d');
     ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
     ctx.font = '12px -apple-system';

@@ -513,7 +513,7 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-// Универсальная функция для рисования графика с сеткой и подписями
+// Универсальная функция для рисования графика с началом из (0,0)
 function drawChart(canvas, points) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -530,23 +530,28 @@ function drawChart(canvas, points) {
     return;
   }
 
-  // Сортируем точки по времени
+  // Сортируем точки по времени и добавляем неявную точку (0,0) в начало для корректного начала графика
   const sortedPoints = [...points].sort((a, b) => a.time - b.time);
+  // Если первая точка не (0,0), добавляем (0,0) в начало для отрисовки линии от нуля
+  const pointsForDrawing = (sortedPoints[0].time !== 0 || sortedPoints[0].water !== 0) 
+    ? [{ time: 0, water: 0 }, ...sortedPoints] 
+    : sortedPoints;
 
   // Отступы для осей
   const margin = { left: 45, top: 20, right: 20, bottom: 35 };
   const graphW = width - margin.left - margin.right;
   const graphH = height - margin.top - margin.bottom;
 
+  // Максимальные значения для масштабирования (только по реальным точкам, без добавленной (0,0))
   const maxTime = Math.max(...sortedPoints.map(p => p.time), 1);
   const maxWater = Math.max(...sortedPoints.map(p => p.water), 1);
 
-  // Рисуем сетку (серые линии)
+  // Рисуем сетку
   ctx.strokeStyle = 'rgba(142, 142, 147, 0.3)';
   ctx.lineWidth = 0.5;
   // Горизонтальные линии (вода)
   for (let i = 0; i <= 5; i++) {
-    const yVal = Math.round(maxWater * i / 5);
+    const yVal = (maxWater * i) / 5;
     const y = height - margin.bottom - (yVal / maxWater) * graphH;
     ctx.beginPath();
     ctx.moveTo(margin.left, y);
@@ -555,7 +560,7 @@ function drawChart(canvas, points) {
   }
   // Вертикальные линии (время)
   for (let i = 0; i <= 5; i++) {
-    const xVal = Math.round(maxTime * i / 5);
+    const xVal = (maxTime * i) / 5;
     const x = margin.left + (xVal / maxTime) * graphW;
     ctx.beginPath();
     ctx.moveTo(x, margin.top);
@@ -563,7 +568,7 @@ function drawChart(canvas, points) {
     ctx.stroke();
   }
 
-  // Рисуем оси (чёрные)
+  // Рисуем оси
   ctx.strokeStyle = 'var(--text-main)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -572,11 +577,11 @@ function drawChart(canvas, points) {
   ctx.lineTo(width - margin.right, height - margin.bottom);
   ctx.stroke();
 
-  // Рисуем линию графика (ярко-оранжевая)
+  // Рисуем линию графика (ярко-оранжевая) — используем pointsForDrawing, чтобы начать с (0,0)
   ctx.strokeStyle = '#ff9f0a';
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  sortedPoints.forEach((p, i) => {
+  pointsForDrawing.forEach((p, i) => {
     const x = margin.left + (p.time / maxTime) * graphW;
     const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
     if (i === 0) ctx.moveTo(x, y);
@@ -584,7 +589,8 @@ function drawChart(canvas, points) {
   });
   ctx.stroke();
 
-  // Рисуем точки (белая обводка + оранжевая заливка)
+  // Рисуем точки (только реальные, без (0,0) — если хотим показывать точку в нуле, можно тоже нарисовать, но обычно не нужно)
+  ctx.fillStyle = '#ff9f0a';
   sortedPoints.forEach(p => {
     const x = margin.left + (p.time / maxTime) * graphW;
     const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
@@ -620,17 +626,17 @@ function drawChart(canvas, points) {
   ctx.textAlign = 'center';
   ctx.fillText(maxTime.toString(), width - margin.right + 15, height - margin.bottom + 5);
   
-  // Дополнительные подписи для наглядности (опционально)
+  // Дополнительные подписи для наглядности
   ctx.font = '8px -apple-system';
   ctx.textAlign = 'center';
   for (let i = 1; i <= 4; i++) {
-    const xVal = Math.round(maxTime * i / 5);
+    const xVal = Math.round((maxTime * i) / 5);
     const x = margin.left + (xVal / maxTime) * graphW;
     ctx.fillText(xVal, x, height - margin.bottom + 12);
   }
   ctx.textAlign = 'right';
   for (let i = 1; i <= 4; i++) {
-    const yVal = Math.round(maxWater * i / 5);
+    const yVal = Math.round((maxWater * i) / 5);
     const y = height - margin.bottom - (yVal / maxWater) * graphH;
     ctx.fillText(yVal, margin.left - 8, y + 3);
   }

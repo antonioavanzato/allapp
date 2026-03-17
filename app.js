@@ -513,7 +513,7 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-// Универсальная функция для рисования графика на канвасе (яркая и контрастная)
+// Универсальная функция для рисования графика с сеткой и подписями
 function drawChart(canvas, points) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -534,16 +534,38 @@ function drawChart(canvas, points) {
   const sortedPoints = [...points].sort((a, b) => a.time - b.time);
 
   // Отступы для осей
-  const margin = { left: 40, top: 20, right: 20, bottom: 30 };
+  const margin = { left: 45, top: 20, right: 20, bottom: 35 };
   const graphW = width - margin.left - margin.right;
   const graphH = height - margin.top - margin.bottom;
 
   const maxTime = Math.max(...sortedPoints.map(p => p.time), 1);
   const maxWater = Math.max(...sortedPoints.map(p => p.water), 1);
 
-  // Рисуем оси
-  ctx.strokeStyle = 'var(--text-muted)';
-  ctx.lineWidth = 1;
+  // Рисуем сетку (серые линии)
+  ctx.strokeStyle = 'rgba(142, 142, 147, 0.3)';
+  ctx.lineWidth = 0.5;
+  // Горизонтальные линии (вода)
+  for (let i = 0; i <= 5; i++) {
+    const yVal = Math.round(maxWater * i / 5);
+    const y = height - margin.bottom - (yVal / maxWater) * graphH;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, y);
+    ctx.lineTo(width - margin.right, y);
+    ctx.stroke();
+  }
+  // Вертикальные линии (время)
+  for (let i = 0; i <= 5; i++) {
+    const xVal = Math.round(maxTime * i / 5);
+    const x = margin.left + (xVal / maxTime) * graphW;
+    ctx.beginPath();
+    ctx.moveTo(x, margin.top);
+    ctx.lineTo(x, height - margin.bottom);
+    ctx.stroke();
+  }
+
+  // Рисуем оси (чёрные)
+  ctx.strokeStyle = 'var(--text-main)';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(margin.left, margin.top);
   ctx.lineTo(margin.left, height - margin.bottom);
@@ -580,7 +602,7 @@ function drawChart(canvas, points) {
 
   // Подписи осей
   ctx.font = '10px -apple-system';
-  ctx.fillStyle = 'var(--text-muted)';
+  ctx.fillStyle = 'var(--text-main)';
   ctx.textAlign = 'center';
   ctx.fillText('Время (сек)', width/2, height - 5);
   ctx.save();
@@ -589,14 +611,29 @@ function drawChart(canvas, points) {
   ctx.fillText('Вода (мл)', 0, 0);
   ctx.restore();
 
-  // Подписи значений на осях
+  // Подписи значений на осях (0 и максимумы)
   ctx.font = '9px -apple-system';
-  ctx.textAlign = 'right';
   ctx.fillStyle = 'var(--text-muted)';
+  ctx.textAlign = 'right';
   ctx.fillText('0', margin.left - 5, height - margin.bottom + 3);
   ctx.fillText(maxWater.toString(), margin.left - 5, margin.top + 5);
   ctx.textAlign = 'center';
   ctx.fillText(maxTime.toString(), width - margin.right + 15, height - margin.bottom + 5);
+  
+  // Дополнительные подписи для наглядности (опционально)
+  ctx.font = '8px -apple-system';
+  ctx.textAlign = 'center';
+  for (let i = 1; i <= 4; i++) {
+    const xVal = Math.round(maxTime * i / 5);
+    const x = margin.left + (xVal / maxTime) * graphW;
+    ctx.fillText(xVal, x, height - margin.bottom + 12);
+  }
+  ctx.textAlign = 'right';
+  for (let i = 1; i <= 4; i++) {
+    const yVal = Math.round(maxWater * i / 5);
+    const y = height - margin.bottom - (yVal / maxWater) * graphH;
+    ctx.fillText(yVal, margin.left - 8, y + 3);
+  }
 }
 
 // Обновление списка точек и графика (для нового рецепта)

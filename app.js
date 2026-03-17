@@ -534,7 +534,7 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-// Универсальная функция для рисования ступенчатого графика
+// Обновление графика с учётом поля "Общая вода"
 function drawChart(canvas, points) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -543,7 +543,17 @@ function drawChart(canvas, points) {
 
   ctx.clearRect(0, 0, width, height);
 
-  if (!points || points.length === 0) {
+  // Собираем все точки для отрисовки: существующие + финальная точка из поля "Общая вода"
+  let allPoints = [...points];
+  const totalWater = parseFloat(coffeeWater.value);
+  if (!isNaN(totalWater) && totalWater > 0) {
+    // Если есть точки, берём максимальное время, иначе 0
+    const maxTime = points.length > 0 ? Math.max(...points.map(p => p.time)) : 0;
+    // Добавляем финальную точку (она будет последней)
+    allPoints.push({ time: maxTime, water: totalWater });
+  }
+
+  if (allPoints.length === 0) {
     ctx.font = '12px -apple-system';
     ctx.fillStyle = 'var(--text-muted)';
     ctx.textAlign = 'center';
@@ -551,26 +561,21 @@ function drawChart(canvas, points) {
     return;
   }
 
-  // Сортируем точки по времени
-  const sortedPoints = [...points].sort((a, b) => a.time - b.time);
-  // Добавляем неявную точку (0,0) для начала
-  const allPoints = (sortedPoints[0].time !== 0 || sortedPoints[0].water !== 0) 
-    ? [{ time: 0, water: 0 }, ...sortedPoints] 
-    : sortedPoints;
+  // Сортируем по времени
+  allPoints.sort((a, b) => a.time - b.time);
 
   // Отступы для осей
   const margin = { left: 45, top: 20, right: 20, bottom: 35 };
   const graphW = width - margin.left - margin.right;
   const graphH = height - margin.top - margin.bottom;
 
-  // Максимальные значения (по реальным точкам, без учёта добавленного (0,0))
-  const maxTime = Math.max(...sortedPoints.map(p => p.time), 1);
-  const maxWater = Math.max(...sortedPoints.map(p => p.water), 1);
+  // Максимальные значения
+  const maxTime = Math.max(...allPoints.map(p => p.time), 1);
+  const maxWater = Math.max(...allPoints.map(p => p.water), 1);
 
   // Рисуем сетку
   ctx.strokeStyle = 'rgba(142, 142, 147, 0.3)';
   ctx.lineWidth = 0.5;
-  // Горизонтальные линии (вода)
   for (let i = 0; i <= 5; i++) {
     const yVal = (maxWater * i) / 5;
     const y = height - margin.bottom - (yVal / maxWater) * graphH;
@@ -579,7 +584,6 @@ function drawChart(canvas, points) {
     ctx.lineTo(width - margin.right, y);
     ctx.stroke();
   }
-  // Вертикальные линии (время)
   for (let i = 0; i <= 5; i++) {
     const xVal = (maxTime * i) / 5;
     const x = margin.left + (xVal / maxTime) * graphW;
@@ -612,19 +616,15 @@ function drawChart(canvas, points) {
     const x2 = margin.left + (p2.time / maxTime) * graphW;
     const y2 = (height - margin.bottom) - (p2.water / maxWater) * graphH;
     
-    // Горизонтальный сегмент от (x1, y1) до (x2, y1)
-    if (i === 0) {
-      ctx.moveTo(x1, y1);
-    }
+    if (i === 0) ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y1);
-    // Вертикальный сегмент от (x2, y1) до (x2, y2)
     ctx.lineTo(x2, y2);
   }
   ctx.stroke();
 
-  // Рисуем точки (только реальные, без (0,0))
+  // Рисуем точки (для всех точек, включая финальную)
   ctx.fillStyle = '#ff9f0a';
-  sortedPoints.forEach(p => {
+  allPoints.forEach(p => {
     const x = margin.left + (p.time / maxTime) * graphW;
     const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
     
@@ -650,7 +650,7 @@ function drawChart(canvas, points) {
   ctx.fillText('Вода (мл)', 0, 0);
   ctx.restore();
 
-  // Подписи значений на осях (0 и максимумы)
+  // Подписи значений на осях
   ctx.font = '9px -apple-system';
   ctx.fillStyle = 'var(--text-muted)';
   ctx.textAlign = 'right';
@@ -659,7 +659,6 @@ function drawChart(canvas, points) {
   ctx.textAlign = 'center';
   ctx.fillText(maxTime.toString(), width - margin.right + 15, height - margin.bottom + 5);
   
-  // Дополнительные подписи для наглядности
   ctx.font = '8px -apple-system';
   ctx.textAlign = 'center';
   for (let i = 1; i <= 4; i++) {
@@ -675,7 +674,7 @@ function drawChart(canvas, points) {
   }
 }
 
-// Обновление списка точек и графика (для нового рецепта)
+// Обновление списка точек и графика
 function renderPointsList() {
   if (!coffeePointsList) return;
   coffeePointsList.innerHTML = '';
@@ -688,14 +687,13 @@ function renderPointsList() {
       e.stopPropagation();
       currentPoints.splice(index, 1);
       renderPointsList();
-      drawChart(coffeeChartCanvas, currentPoints);
     });
     coffeePointsList.appendChild(tag);
   });
   drawChart(coffeeChartCanvas, currentPoints);
 }
 
-// Добавление точки (для нового рецепта) с поддержкой формата мм:сс
+// Добавление точки
 addPointBtn.addEventListener('click', () => {
   const timeStr = pointTimeInput.value.trim();
   const water = parseFloat(pointWaterInput.value);
@@ -709,14 +707,13 @@ addPointBtn.addEventListener('click', () => {
     return;
   }
   currentPoints.push({ time: timeSeconds, water });
-  // Сортируем по времени, чтобы график был логичным
   currentPoints.sort((a, b) => a.time - b.time);
   pointTimeInput.value = '';
   pointWaterInput.value = '';
   renderPointsList();
 });
 
-// Сброс формы нового рецепта
+// Сброс формы
 function resetCoffeeForm() {
   coffeeName.value = '';
   coffeeProcessing.value = '';
@@ -748,7 +745,7 @@ coffeeSaveBtn.addEventListener('click', async () => {
     grind: coffeeGrind.value ? parseInt(coffeeGrind.value) : null,
     temp: coffeeTemp.value ? parseFloat(coffeeTemp.value) : null,
     totalWater: coffeeWater.value ? parseInt(coffeeWater.value) : null,
-    points: currentPoints, // массив { time, water }, где time в секундах
+    points: currentPoints,
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
   };
@@ -778,20 +775,18 @@ function loadCoffeeRecipes() {
   }, error => console.error('Ошибка загрузки рецептов:', error));
 }
 
-// Отрисовка карточки рецепта (с графиком и отображением времени в формате мм:сс)
+// Отрисовка карточки рецепта
 function renderCoffeeRecipe(id, data) {
   const card = document.createElement('div');
   card.className = 'coffee-recipe-card';
   
   const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : 'не указана';
   
-  // Форматируем точки для отображения в карточке
   let pointsStr = '';
   if (data.points && data.points.length > 0) {
     pointsStr = data.points.map(p => `${formatTime(p.time)} / ${p.water}мл`).join(', ');
   }
   
-  // Создаём канвас для графика
   const canvasId = `chart-${id}`;
   
   card.innerHTML = `
@@ -830,10 +825,11 @@ function renderCoffeeRecipe(id, data) {
   
   coffeeRecipesList.appendChild(card);
   
-  // Рисуем график для этого рецепта
   const chartCanvas = document.getElementById(canvasId);
   if (chartCanvas && data.points && data.points.length > 0) {
-    drawChart(chartCanvas, data.points);
+    // Для отображения в карточке используем только сохранённые точки, без учёта поля общей воды
+    const ctx = chartCanvas.getContext('2d');
+    drawChartWithPoints(chartCanvas, data.points);
   } else if (chartCanvas) {
     const ctx = chartCanvas.getContext('2d');
     ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
@@ -844,11 +840,105 @@ function renderCoffeeRecipe(id, data) {
   }
 }
 
-// Слушатель для обновления возраста при изменении даты
+// Вспомогательная функция для отрисовки графика в карточке (без учёта поля общей воды)
+function drawChartWithPoints(canvas, points) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+
+  ctx.clearRect(0, 0, width, height);
+
+  if (!points || points.length === 0) {
+    ctx.font = '12px -apple-system';
+    ctx.fillStyle = 'var(--text-muted)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Нет данных', width/2, height/2);
+    return;
+  }
+
+  const sortedPoints = [...points].sort((a, b) => a.time - b.time);
+  const allPoints = (sortedPoints[0].time !== 0 || sortedPoints[0].water !== 0) 
+    ? [{ time: 0, water: 0 }, ...sortedPoints] 
+    : sortedPoints;
+
+  const margin = { left: 45, top: 20, right: 20, bottom: 35 };
+  const graphW = width - margin.left - margin.right;
+  const graphH = height - margin.top - margin.bottom;
+
+  const maxTime = Math.max(...sortedPoints.map(p => p.time), 1);
+  const maxWater = Math.max(...sortedPoints.map(p => p.water), 1);
+
+  // Рисуем сетку (упрощённо)
+  ctx.strokeStyle = 'rgba(142, 142, 147, 0.3)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 5; i++) {
+    const yVal = (maxWater * i) / 5;
+    const y = height - margin.bottom - (yVal / maxWater) * graphH;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, y);
+    ctx.lineTo(width - margin.right, y);
+    ctx.stroke();
+  }
+  for (let i = 0; i <= 5; i++) {
+    const xVal = (maxTime * i) / 5;
+    const x = margin.left + (xVal / maxTime) * graphW;
+    ctx.beginPath();
+    ctx.moveTo(x, margin.top);
+    ctx.lineTo(x, height - margin.bottom);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = 'var(--text-main)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(margin.left, margin.top);
+  ctx.lineTo(margin.left, height - margin.bottom);
+  ctx.lineTo(width - margin.right, height - margin.bottom);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#ff9f0a';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let i = 0; i < allPoints.length - 1; i++) {
+    const p1 = allPoints[i];
+    const p2 = allPoints[i + 1];
+    const x1 = margin.left + (p1.time / maxTime) * graphW;
+    const y1 = (height - margin.bottom) - (p1.water / maxWater) * graphH;
+    const x2 = margin.left + (p2.time / maxTime) * graphW;
+    const y2 = (height - margin.bottom) - (p2.water / maxWater) * graphH;
+    if (i === 0) ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y1);
+    ctx.lineTo(x2, y2);
+  }
+  ctx.stroke();
+
+  ctx.fillStyle = '#ff9f0a';
+  sortedPoints.forEach(p => {
+    const x = margin.left + (p.time / maxTime) * graphW;
+    const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ff9f0a';
+    ctx.fill();
+    // Белая обводка для наглядности
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+}
+
+// Слушатель для обновления возраста
 if (coffeeRoastDate) {
   coffeeRoastDate.addEventListener('change', updateCoffeeAge);
   coffeeRoastDate.addEventListener('blur', updateCoffeeAge);
 }
 
-// Делаем функцию updateCoffeeAge доступной глобально для onblur в HTML
+// Слушатель для поля "Общая вода" – перерисовываем график при изменении
+if (coffeeWater) {
+  coffeeWater.addEventListener('input', () => {
+    drawChart(coffeeChartCanvas, currentPoints);
+  });
+}
+
 window.updateCoffeeAge = updateCoffeeAge;

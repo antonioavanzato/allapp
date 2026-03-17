@@ -174,7 +174,7 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Функция переключения вкладок
+// Функция переключения вкладок (добавлено управление видимостью кнопок QR)
 function switchTab(tab) {
   currentTab = tab;
   
@@ -188,6 +188,12 @@ function switchTab(tab) {
     else if (tab === 'tasks') pageTitle.textContent = 'Задачи';
     else if (tab === 'albus') pageTitle.textContent = 'Альбус';
     else if (tab === 'coffee') pageTitle.textContent = 'Кофе';
+  }
+  
+  // Управление видимостью блока с кнопками QR (показываем только в покупках)
+  const shopButtons = document.getElementById('header-shop-buttons');
+  if (shopButtons) {
+    shopButtons.style.display = tab === 'shopping' ? 'flex' : 'none';
   }
   
   if (tab === 'shopping' || tab === 'tasks') {
@@ -942,3 +948,54 @@ if (coffeeWater) {
 }
 
 window.updateCoffeeAge = updateCoffeeAge;
+
+// ---------- QR-коды магазинов ----------
+// Функция для создания модального окна с QR-кодом
+function showQRModal(imageSrc, storeName) {
+  // Проверяем, не открыто ли уже модальное окно
+  if (document.querySelector('.qr-modal')) return;
+
+  const modal = document.createElement('div');
+  modal.className = 'qr-modal';
+  
+  const content = document.createElement('div');
+  content.className = 'qr-modal-content';
+  
+  const img = document.createElement('img');
+  img.src = imageSrc;
+  img.alt = `QR-код ${storeName}`;
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'qr-modal-close';
+  closeBtn.innerHTML = '✕';
+  closeBtn.addEventListener('click', () => {
+    modal.remove();
+  });
+  
+  content.appendChild(img);
+  content.appendChild(closeBtn);
+  modal.appendChild(content);
+  
+  // Закрытие по клику на фон
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+  
+  document.body.appendChild(modal);
+}
+
+// Обработчики для кнопок
+const qrMagnitBtn = document.getElementById('qr-magnit-btn');
+const qrPyaterochkaBtn = document.getElementById('qr-pyaterochka-btn');
+
+if (qrMagnitBtn) {
+  qrMagnitBtn.addEventListener('click', () => {
+    showQRModal('icons/qr-magnit.png', 'Магнит');
+  });
+}
+
+if (qrPyaterochkaBtn) {
+  qrPyaterochkaBtn.addEventListener('click', () => {
+    showQRModal('icons/qr-pyaterochka.png', 'Пятёрочка');
+  });
+}

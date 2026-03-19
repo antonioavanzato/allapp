@@ -26,6 +26,51 @@ const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk
 
 let currentFCMToken = null;
 
+// ── Offline-индикатор ──
+const offlineBar = document.createElement('div');
+offlineBar.className = 'offline-bar';
+offlineBar.textContent = '⚡ Нет соединения — изменения сохранятся при подключении';
+document.body.prepend(offlineBar);
+
+function setOfflineState(isOffline) {
+  if (isOffline) {
+    document.body.classList.add('is-offline');
+    offlineBar.classList.add('visible');
+  } else {
+    document.body.classList.remove('is-offline');
+    offlineBar.classList.remove('visible');
+  }
+}
+
+if (!navigator.onLine) setOfflineState(true);
+
+window.addEventListener('online', () => {
+  setOfflineState(false);
+  showToast('Соединение восстановлено', 'success');
+});
+
+window.addEventListener('offline', () => {
+  setOfflineState(true);
+});
+
+// ── SW: проверка обновлений ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('firebase-messaging-sw.js');
+
+    navigator.serviceWorker.register('sw.js').then((registration) => {
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showToast('Доступно обновление — перезагрузите страницу', 'warning');
+          }
+        });
+      });
+    });
+  });
+}
+
 // ── FCM ──
 async function initFCMToken() {
   try {
@@ -57,7 +102,6 @@ async function removeFCMToken() {
   }
 }
 
-// Показываем уведомление через toast когда приложение открыто
 onMessage(messaging, (payload) => {
   const title = payload.notification?.title || '';
   const body = payload.notification?.body || '';
@@ -295,7 +339,7 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   });
 });
 
-// ИСПРАВЛЕНО: mousemove только во время свайпа
+// ── Swipe list items ──
 function renderItem(id, item) {
   if (!itemsList) return;
   const li = document.createElement('li');
@@ -383,7 +427,7 @@ function renderItem(id, item) {
 
 navItems.forEach(nav => nav.addEventListener('click', () => switchTab(nav.dataset.tab)));
 
-// Быстрые продукты
+// ── Quick products ──
 const quickToggle = document.getElementById('quick-toggle');
 const quickGrid = document.getElementById('quick-grid');
 const quickArrow = document.getElementById('quick-arrow');
@@ -482,7 +526,7 @@ if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => {
   renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
 });
 
-// ── Кофе: график ──
+// ── Кофе ──
 function parseTimeString(str) {
   if (!str) return 0;
   const parts = str.split(':');
@@ -542,7 +586,6 @@ function drawStepChart(canvas, allPoints) {
   const toX = t => margin.left + (t / maxTime) * graphW;
   const toY = w => (height - margin.bottom) - (w / maxWater) * graphH;
 
-  // Сетка
   ctx.strokeStyle = 'rgba(142,142,147,0.25)';
   ctx.lineWidth = 0.5;
   for (let i = 0; i <= 4; i++) {
@@ -552,7 +595,6 @@ function drawStepChart(canvas, allPoints) {
     ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, height - margin.bottom); ctx.stroke();
   }
 
-  // Оси
   ctx.strokeStyle = '#8e8e93';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -561,7 +603,6 @@ function drawStepChart(canvas, allPoints) {
   ctx.lineTo(width - margin.right, height - margin.bottom);
   ctx.stroke();
 
-  // Заливка
   ctx.fillStyle = 'rgba(255,159,10,0.08)';
   ctx.beginPath();
   ctx.moveTo(toX(allPoints[0].time), toY(allPoints[0].water));
@@ -574,7 +615,6 @@ function drawStepChart(canvas, allPoints) {
   ctx.closePath();
   ctx.fill();
 
-  // Линия
   ctx.strokeStyle = '#ff9f0a';
   ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
@@ -586,7 +626,6 @@ function drawStepChart(canvas, allPoints) {
   }
   ctx.stroke();
 
-  // Точки
   allPoints.slice(1).forEach(p => {
     const x = toX(p.time), y = toY(p.water);
     ctx.beginPath(); ctx.arc(x, y, 5, 0, 2*Math.PI);
@@ -595,7 +634,6 @@ function drawStepChart(canvas, allPoints) {
     ctx.fillStyle = '#ff9f0a'; ctx.fill();
   });
 
-  // Подписи
   ctx.font = '10px -apple-system';
   ctx.fillStyle = '#8e8e93';
   ctx.textAlign = 'center';

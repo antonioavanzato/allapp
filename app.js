@@ -1,10 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, 
-  serverTimestamp, arrayUnion, setDoc, getDocs, where, getDoc 
+  serverTimestamp, setDoc, where, getDoc 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAICtDB0Rie_2W2DAoX0MOJm7kDSbTAEUA",
@@ -19,8 +20,51 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const messaging = getMessaging(app);
+const functions = getFunctions(app);
 
-// DOM элементы
+const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q';
+
+let currentFCMToken = null;
+
+// ── FCM ──
+async function initFCMToken() {
+  try {
+    if (!('Notification' in window)) return;
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if (!token) return;
+
+    currentFCMToken = token;
+
+    const saveToken = httpsCallable(functions, 'saveUserToken');
+    await saveToken({ token });
+    console.log('FCM токен сохранён');
+  } catch (error) {
+    console.error('Ошибка FCM:', error);
+  }
+}
+
+async function removeFCMToken() {
+  if (!currentFCMToken) return;
+  try {
+    const removeToken = httpsCallable(functions, 'removeUserToken');
+    await removeToken({ token: currentFCMToken });
+    currentFCMToken = null;
+  } catch (error) {
+    console.error('Ошибка удаления FCM токена:', error);
+  }
+}
+
+// Показываем уведомление через toast когда приложение открыто
+onMessage(messaging, (payload) => {
+  const title = payload.notification?.title || '';
+  const body = payload.notification?.body || '';
+  showToast(`${title}: ${body}`);
+});
+
+// ── DOM ──
 const authScreen = document.getElementById('auth-screen');
 const mainApp = document.getElementById('main-app');
 const emailInput = document.getElementById('email-input');
@@ -41,13 +85,11 @@ const listSection = document.getElementById('list-section');
 const calendarContainer = document.getElementById('albus-calendar');
 const coffeeSection = document.getElementById('coffee-section');
 
-// Элементы календаря
 const calendarDays = document.getElementById('calendar-days');
 const currentMonthSpan = document.getElementById('current-month');
 const prevMonthBtn = document.getElementById('prev-month');
 const nextMonthBtn = document.getElementById('next-month');
 
-// Элементы кофе
 const coffeeName = document.getElementById('coffee-name');
 const coffeeProcessing = document.getElementById('coffee-processing');
 const coffeeRoastDate = document.getElementById('coffee-roast-date');
@@ -69,14 +111,9 @@ let unsubscribe = null;
 let unsubscribeCalendar = null;
 let unsubscribeCoffee = null;
 let currentUser = null;
-
-// Текущий месяц для календаря
 let currentCalendarDate = new Date();
-
-// Массив точек для графика (временные, до сохранения)
 let currentPoints = [];
 
-// Словарь имен
 const userNames = {
   'antonioavanzato@gmail.com': 'Антон',
   'style_of_live@gmail.com': 'Даша',
@@ -87,25 +124,11 @@ const userNames = {
 function getUserDisplayName(email) {
   if (!email) return '';
   if (userNames[email]) return userNames[email];
-  const emailWithoutDomain = email.split('@')[0];
-  if (userNames[emailWithoutDomain]) return userNames[emailWithoutDomain];
-  return emailWithoutDomain;
+  const local = email.split('@')[0];
+  return userNames[local] || local;
 }
 
-// Уведомления
-function showNotification(title, body) {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'granted') {
-    new Notification(title, {
-      body: body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      vibrate: [200, 100, 200]
-    });
-  }
-}
-
-// Тосты
+// ── Toast ──
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast-message');
   if (!toast) return;
@@ -115,7 +138,6 @@ function showToast(message, type = 'success') {
   setTimeout(() => toast.classList.add('hidden'), 2000);
 }
 
-// Прокрутка к новому элементу
 function scrollToNewItem() {
   setTimeout(() => {
     const lastItem = itemsList.lastElementChild;
@@ -128,7 +150,7 @@ function scrollToNewItem() {
   }, 100);
 }
 
-// Вход
+// ── Auth ──
 loginBtn.addEventListener('click', async () => {
   const email = emailInput?.value;
   const password = passwordInput?.value;
@@ -139,27 +161,24 @@ loginBtn.addEventListener('click', async () => {
   try {
     if (authError) authError.textContent = '';
     await signInWithEmailAndPassword(auth, email, password);
-    console.log('Вход выполнен');
   } catch (error) {
     console.error('Ошибка входа:', error);
     if (authError) authError.textContent = 'Неверный email или пароль';
   }
 });
 
-// Выход
-logoutBtn.addEventListener('click', () => {
+logoutBtn.addEventListener('click', async () => {
+  await removeFCMToken();
   signOut(auth).catch(error => console.error('Ошибка выхода:', error));
 });
 
-// Состояние авторизации
 onAuthStateChanged(auth, (user) => {
-  console.log('Auth state changed:', user ? 'пользователь есть' : 'пользователя нет');
   if (user) {
     currentUser = user;
     authScreen.classList.add('hidden');
     mainApp.classList.remove('hidden');
     switchTab('shopping');
-    if (Notification.permission === 'default') Notification.requestPermission();
+    initFCMToken();
   } else {
     currentUser = null;
     if (unsubscribe) unsubscribe();
@@ -172,37 +191,31 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Функция переключения вкладок
+// ── Tabs ──
 function switchTab(tab) {
   currentTab = tab;
-  
+
   navItems.forEach(nav => {
     nav.classList.remove('active');
     if (nav.dataset.tab === tab) nav.classList.add('active');
   });
-  
+
   if (pageTitle) {
-    if (tab === 'shopping') pageTitle.textContent = 'Покупки';
-    else if (tab === 'tasks') pageTitle.textContent = 'Задачи';
-    else if (tab === 'albus') pageTitle.textContent = 'Альбус';
-    else if (tab === 'coffee') pageTitle.textContent = 'Кофе';
+    const titles = { shopping: 'Покупки', tasks: 'Задачи', albus: 'Альбус', coffee: 'Кофе' };
+    pageTitle.textContent = titles[tab] || '';
   }
-  
+
   const shopButtons = document.getElementById('header-shop-buttons');
-  if (shopButtons) {
-    shopButtons.style.display = tab === 'shopping' ? 'flex' : 'none';
-  }
-  
+  if (shopButtons) shopButtons.style.display = tab === 'shopping' ? 'flex' : 'none';
+
   if (tab === 'shopping' || tab === 'tasks') {
     if (quickContainer) quickContainer.style.display = tab === 'shopping' ? 'block' : 'none';
     if (inputGroup) inputGroup.style.display = 'flex';
     if (listSection) listSection.style.display = 'block';
     if (calendarContainer) calendarContainer.classList.add('hidden');
     if (coffeeSection) coffeeSection.classList.add('hidden');
-    
     if (listTitle) listTitle.textContent = tab === 'shopping' ? 'Список покупок' : 'Список задач';
     if (itemInput) itemInput.placeholder = tab === 'shopping' ? 'Что купить?..' : 'Новая задача...';
-    
     loadListData();
   } else if (tab === 'albus') {
     if (quickContainer) quickContainer.style.display = 'none';
@@ -210,7 +223,6 @@ function switchTab(tab) {
     if (listSection) listSection.style.display = 'none';
     if (calendarContainer) calendarContainer.classList.remove('hidden');
     if (coffeeSection) coffeeSection.classList.add('hidden');
-    
     loadCalendar();
   } else if (tab === 'coffee') {
     if (quickContainer) quickContainer.style.display = 'none';
@@ -218,20 +230,17 @@ function switchTab(tab) {
     if (listSection) listSection.style.display = 'none';
     if (calendarContainer) calendarContainer.classList.add('hidden');
     if (coffeeSection) coffeeSection.classList.remove('hidden');
-    
     resetCoffeeForm();
     loadCoffeeRecipes();
   }
 }
 
-// Загрузка данных списка
+// ── List ──
 function loadListData() {
   if (unsubscribe) unsubscribe();
   if (!currentUser) return;
-  
-  const collectionRef = collection(db, 'family', 'shared', currentTab);
-  const q = query(collectionRef, orderBy('createdAt', 'desc'));
-  
+
+  const q = query(collection(db, 'family', 'shared', currentTab), orderBy('createdAt', 'desc'));
   unsubscribe = onSnapshot(q, (snapshot) => {
     itemsList.innerHTML = '';
     if (snapshot.empty) {
@@ -243,15 +252,13 @@ function loadListData() {
   }, error => console.error('Ошибка загрузки:', error));
 }
 
-// Добавление элемента
 async function addItem() {
   const text = itemInput?.value.trim();
   if (!text || !currentUser) return;
   itemInput.value = '';
-  
   try {
     await addDoc(collection(db, 'family', 'shared', currentTab), {
-      text: text,
+      text,
       completed: false,
       createdAt: serverTimestamp(),
       createdBy: currentUser.email,
@@ -264,10 +271,10 @@ async function addItem() {
     showToast('Ошибка при добавлении', 'error');
   }
 }
+
 if (addBtn) addBtn.addEventListener('click', addItem);
 if (itemInput) itemInput.addEventListener('keypress', e => { if (e.key === 'Enter') addItem(); });
 
-// Быстрые кнопки
 document.querySelectorAll('.quick-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
     const product = btn.dataset.product;
@@ -283,19 +290,17 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
       showToast(`Добавлено: ${product}`);
       scrollToNewItem();
     } catch (error) {
-      console.error('Ошибка:', error);
       showToast('Ошибка при добавлении', 'error');
     }
   });
 });
 
-// Отрисовка элемента списка
-// ИСПРАВЛЕНО: убрана утечка через window.addEventListener('mousemove')
+// ИСПРАВЛЕНО: mousemove только во время свайпа
 function renderItem(id, item) {
   if (!itemsList) return;
   const li = document.createElement('li');
-  let displayName = item.createdByName || getUserDisplayName(item.createdBy);
-  
+  const displayName = item.createdByName || getUserDisplayName(item.createdBy);
+
   li.innerHTML = `
     <div class="swipe-actions">
       <div class="action-complete">✓ Готово</div>
@@ -310,31 +315,26 @@ function renderItem(id, item) {
   `;
 
   const swipeContent = li.querySelector('.swipe-content');
-  let startX = 0, currentX = 0, translateX = 0, isSwiping = false;
+  let startX = 0, translateX = 0, isSwiping = false;
   const threshold = 80;
   const getX = e => e.touches ? e.touches[0].clientX : e.clientX;
 
   const start = e => {
     startX = getX(e);
     isSwiping = true;
-    li.classList.add('is-swiping');
     li.classList.remove('swiping-right', 'swiping-left');
   };
 
   const move = e => {
     if (!isSwiping) return;
-    currentX = getX(e);
-    translateX = currentX - startX;
+    translateX = getX(e) - startX;
     if (translateX > 120) translateX = 120;
     if (translateX < -120) translateX = -120;
     if (swipeContent) swipeContent.style.transform = `translateX(${translateX}px)`;
-    
     if (translateX > 20) {
-      li.classList.add('swiping-right');
-      li.classList.remove('swiping-left');
+      li.classList.add('swiping-right'); li.classList.remove('swiping-left');
     } else if (translateX < -20) {
-      li.classList.add('swiping-left');
-      li.classList.remove('swiping-right');
+      li.classList.add('swiping-left'); li.classList.remove('swiping-right');
     } else {
       li.classList.remove('swiping-right', 'swiping-left');
     }
@@ -343,17 +343,13 @@ function renderItem(id, item) {
   const end = async () => {
     if (!isSwiping) return;
     isSwiping = false;
-    li.classList.remove('is-swiping');
     li.classList.remove('swiping-right', 'swiping-left');
-    
-    // Убираем локальные mouse-обработчики сразу после окончания жеста
     document.removeEventListener('mousemove', move);
     document.removeEventListener('mouseup', end);
-    
+
     try {
       if (translateX > threshold) {
-        const docRef = doc(db, 'family', 'shared', currentTab, id);
-        await updateDoc(docRef, { completed: !item.completed });
+        await updateDoc(doc(db, 'family', 'shared', currentTab, id), { completed: !item.completed });
         showToast(!item.completed ? 'Выполнено' : 'Возвращено');
       } else if (translateX < -threshold) {
         li.style.transition = 'all 0.3s ease';
@@ -373,12 +369,9 @@ function renderItem(id, item) {
     translateX = 0;
   };
 
-  // Touch — на элементе
   li.addEventListener('touchstart', start, { passive: true });
   li.addEventListener('touchmove', move, { passive: false });
   li.addEventListener('touchend', end);
-
-  // Mouse — добавляем move/up на document только во время активного свайпа
   li.addEventListener('mousedown', e => {
     start(e);
     document.addEventListener('mousemove', move);
@@ -388,14 +381,9 @@ function renderItem(id, item) {
   itemsList.appendChild(li);
 }
 
-// Навигация
-navItems.forEach(nav => {
-  nav.addEventListener('click', () => {
-    switchTab(nav.dataset.tab);
-  });
-});
+navItems.forEach(nav => nav.addEventListener('click', () => switchTab(nav.dataset.tab)));
 
-// Быстрые продукты (сворачиваемый блок)
+// Быстрые продукты
 const quickToggle = document.getElementById('quick-toggle');
 const quickGrid = document.getElementById('quick-grid');
 const quickArrow = document.getElementById('quick-arrow');
@@ -404,43 +392,35 @@ if (quickToggle && quickGrid && quickArrow) {
   quickGrid.classList.add('collapsed');
   quickArrow.classList.add('collapsed');
   quickToggle.addEventListener('click', () => {
-    if (isQuickExpanded) {
-      quickGrid.classList.add('collapsed');
-      quickArrow.classList.add('collapsed');
-    } else {
-      quickGrid.classList.remove('collapsed');
-      quickArrow.classList.remove('collapsed');
-    }
     isQuickExpanded = !isQuickExpanded;
+    quickGrid.classList.toggle('collapsed', !isQuickExpanded);
+    quickArrow.classList.toggle('collapsed', !isQuickExpanded);
   });
 }
 
-// ---------- Календарь ----------
+// ── Календарь ──
 function loadCalendar() {
   if (unsubscribeCalendar) unsubscribeCalendar();
   renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
 }
 
 function renderCalendar(year, month) {
-  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
   currentMonthSpan.textContent = `${monthNames[month]} ${year}`;
 
   const firstDay = new Date(year, month, 1);
-  let startDayOfWeek = firstDay.getDay();
-  let startOffset = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+  const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const pad = n => String(n).padStart(2, '0');
 
   const daysArray = [];
   for (let i = 0; i < startOffset; i++) daysArray.push(null);
   for (let d = 1; d <= daysInMonth; d++) daysArray.push(d);
 
-  const startDateStr = `${year}-${String(month+1).padStart(2,'0')}-01`;
-  const endDateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
-  
   const q = query(
     collection(db, 'family', 'shared', 'albus'),
-    where('date', '>=', startDateStr),
-    where('date', '<=', endDateStr)
+    where('date', '>=', `${year}-${pad(month+1)}-01`),
+    where('date', '<=', `${year}-${pad(month+1)}-${pad(daysInMonth)}`)
   );
 
   if (unsubscribeCalendar) unsubscribeCalendar();
@@ -458,29 +438,26 @@ function renderCalendar(year, month) {
       if (day === null) {
         dayDiv.classList.add('empty');
       } else {
-        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const dateStr = `${year}-${pad(month+1)}-${pad(day)}`;
         dayDiv.textContent = day;
-        if (takenMap[dateStr] === true) {
-          dayDiv.classList.add('taken');
-        }
+        if (takenMap[dateStr] === true) dayDiv.classList.add('taken');
         dayDiv.dataset.date = dateStr;
-        dayDiv.addEventListener('click', () => handleDayClick(dateStr, dayDiv));
+        dayDiv.addEventListener('click', () => handleDayClick(dateStr));
       }
       calendarDays.appendChild(dayDiv);
     });
   });
 }
 
-async function handleDayClick(dateStr, dayElement) {
+async function handleDayClick(dateStr) {
   if (!currentUser) return;
-  
   const docRef = doc(db, 'family', 'shared', 'albus', dateStr);
   try {
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const current = docSnap.data().taken;
       await updateDoc(docRef, { taken: !current });
-      showToast(!current ? 'Отмечено' : 'Отмена', 'success');
+      showToast(!current ? 'Отмечено' : 'Отмена');
     } else {
       await setDoc(docRef, {
         date: dateStr,
@@ -488,35 +465,28 @@ async function handleDayClick(dateStr, dayElement) {
         createdBy: currentUser.email,
         createdAt: serverTimestamp()
       });
-      showToast('✅ Отмечено', 'success');
+      showToast('Отмечено');
     }
   } catch (error) {
-    console.error('Ошибка при отметке:', error);
+    console.error('Ошибка:', error);
     showToast('Ошибка', 'error');
   }
 }
 
-if (prevMonthBtn && nextMonthBtn) {
-  prevMonthBtn.addEventListener('click', () => {
-    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-    renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
-  });
-  nextMonthBtn.addEventListener('click', () => {
-    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-    renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
-  });
-}
+if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => {
+  currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+  renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
+});
+if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => {
+  currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+  renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
+});
 
-// ---------- Кофе ----------
-
+// ── Кофе: график ──
 function parseTimeString(str) {
   if (!str) return 0;
   const parts = str.split(':');
-  if (parts.length === 2) {
-    const minutes = parseInt(parts[0], 10) || 0;
-    const seconds = parseInt(parts[1], 10) || 0;
-    return minutes * 60 + seconds;
-  }
+  if (parts.length === 2) return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
   return parseInt(str, 10) || 0;
 }
 
@@ -528,58 +498,30 @@ function formatTime(seconds) {
 
 function updateCoffeeAge() {
   const dateStr = coffeeRoastDate.value;
-  if (!dateStr) {
-    coffeeAgeSpan.textContent = '— дней';
-    return;
-  }
+  if (!dateStr) { coffeeAgeSpan.textContent = '— дней'; return; }
   const roastDate = new Date(dateStr);
   const today = new Date();
-  roastDate.setHours(0,0,0,0);
-  today.setHours(0,0,0,0);
-  const diffTime = today - roastDate;
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  roastDate.setHours(0,0,0,0); today.setHours(0,0,0,0);
+  const diffDays = Math.floor((today - roastDate) / 86400000);
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-// ============================================================
-// ИСПРАВЛЕННЫЙ ГРАФИК
-// Логика V60: заварка идёт порциями — линия всегда стартует
-// с (0,0), каждая точка — момент начала влива.
-// Ступенька: сначала вертикально вверх до нового значения воды,
-// затем горизонтально вправо до следующего времени.
-// Финальная точка из поля "Общая вода" добавляется правее
-// последней точки вливания.
-// ============================================================
-
 function buildChartPoints(points, totalWater) {
-  // Всегда начинаем с (0, 0)
-  const base = [{ time: 0, water: 0 }];
   const sorted = [...points].sort((a, b) => a.time - b.time);
-  const all = [...base, ...sorted];
-
-  // Финальная точка "общая вода" — добавляем если задана
-  // и её значение >= последней точки, а время чуть правее
-  if (totalWater && totalWater > 0 && sorted.length > 0) {
-    const lastPoint = sorted[sorted.length - 1];
-    // Если общая вода больше последней точки — добавляем финал
-    // Время берём как lastPoint.time + разумный шаг (10 сек)
-    if (totalWater >= lastPoint.water) {
-      all.push({ time: lastPoint.time + 10, water: totalWater });
-    }
-  } else if (totalWater && totalWater > 0 && sorted.length === 0) {
-    // Точек нет, только общая вода — показываем хотя бы один столбик
+  const all = [{ time: 0, water: 0 }, ...sorted];
+  if (totalWater > 0 && sorted.length > 0) {
+    const last = sorted[sorted.length - 1];
+    if (totalWater >= last.water) all.push({ time: last.time + 10, water: totalWater });
+  } else if (totalWater > 0) {
     all.push({ time: 30, water: totalWater });
   }
-
   return all;
 }
 
 function drawStepChart(canvas, allPoints) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
-
+  const { width, height } = canvas;
   ctx.clearRect(0, 0, width, height);
 
   if (allPoints.length < 2) {
@@ -593,17 +535,15 @@ function drawStepChart(canvas, allPoints) {
   const margin = { left: 45, top: 20, right: 20, bottom: 35 };
   const graphW = width - margin.left - margin.right;
   const graphH = height - margin.top - margin.bottom;
-
   const maxTime = Math.max(...allPoints.map(p => p.time));
   const maxWater = Math.max(...allPoints.map(p => p.water));
-
-  if (maxTime === 0 || maxWater === 0) return;
+  if (!maxTime || !maxWater) return;
 
   const toX = t => margin.left + (t / maxTime) * graphW;
   const toY = w => (height - margin.bottom) - (w / maxWater) * graphH;
 
   // Сетка
-  ctx.strokeStyle = 'rgba(142, 142, 147, 0.25)';
+  ctx.strokeStyle = 'rgba(142,142,147,0.25)';
   ctx.lineWidth = 0.5;
   for (let i = 0; i <= 4; i++) {
     const y = toY((maxWater * i) / 4);
@@ -621,53 +561,41 @@ function drawStepChart(canvas, allPoints) {
   ctx.lineTo(width - margin.right, height - margin.bottom);
   ctx.stroke();
 
-  // Ступенчатая линия: от (0,0) вверх до water[i], потом горизонтально до time[i+1]
-  ctx.strokeStyle = '#ff9f0a';
-  ctx.lineWidth = 2.5;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(toX(allPoints[0].time), toY(allPoints[0].water)); // (0,0)
-
-  for (let i = 1; i < allPoints.length; i++) {
-    const prev = allPoints[i - 1];
-    const curr = allPoints[i];
-    // Вертикально вверх до curr.water на том же времени prev.time
-    ctx.lineTo(toX(prev.time), toY(curr.water));
-    // Горизонтально вправо до curr.time
-    ctx.lineTo(toX(curr.time), toY(curr.water));
-  }
-  ctx.stroke();
-
-  // Закрашенная область под графиком
-  ctx.fillStyle = 'rgba(255, 159, 10, 0.08)';
+  // Заливка
+  ctx.fillStyle = 'rgba(255,159,10,0.08)';
   ctx.beginPath();
   ctx.moveTo(toX(allPoints[0].time), toY(allPoints[0].water));
   for (let i = 1; i < allPoints.length; i++) {
-    const prev = allPoints[i - 1];
-    const curr = allPoints[i];
-    ctx.lineTo(toX(prev.time), toY(curr.water));
-    ctx.lineTo(toX(curr.time), toY(curr.water));
+    ctx.lineTo(toX(allPoints[i-1].time), toY(allPoints[i].water));
+    ctx.lineTo(toX(allPoints[i].time), toY(allPoints[i].water));
   }
-  ctx.lineTo(toX(allPoints[allPoints.length - 1].time), toY(0));
+  ctx.lineTo(toX(allPoints[allPoints.length-1].time), toY(0));
   ctx.lineTo(toX(0), toY(0));
   ctx.closePath();
   ctx.fill();
 
-  // Точки (только реальные точки вливания, не (0,0))
+  // Линия
+  ctx.strokeStyle = '#ff9f0a';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(toX(allPoints[0].time), toY(allPoints[0].water));
+  for (let i = 1; i < allPoints.length; i++) {
+    ctx.lineTo(toX(allPoints[i-1].time), toY(allPoints[i].water));
+    ctx.lineTo(toX(allPoints[i].time), toY(allPoints[i].water));
+  }
+  ctx.stroke();
+
+  // Точки
   allPoints.slice(1).forEach(p => {
-    const x = toX(p.time);
-    const y = toY(p.water);
-    ctx.beginPath();
-    ctx.arc(x, y, 5, 0, 2 * Math.PI);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
-    ctx.fillStyle = '#ff9f0a';
-    ctx.fill();
+    const x = toX(p.time), y = toY(p.water);
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, 2*Math.PI);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 2*Math.PI);
+    ctx.fillStyle = '#ff9f0a'; ctx.fill();
   });
 
-  // Подписи осей
+  // Подписи
   ctx.font = '10px -apple-system';
   ctx.fillStyle = '#8e8e93';
   ctx.textAlign = 'center';
@@ -677,44 +605,29 @@ function drawStepChart(canvas, allPoints) {
   ctx.rotate(-Math.PI / 2);
   ctx.fillText('Вода (мл)', 0, 0);
   ctx.restore();
-
-  // Подписи значений
   ctx.font = '9px -apple-system';
-  ctx.fillStyle = '#8e8e93';
   ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const val = Math.round((maxWater * i) / 4);
-    ctx.fillText(val, margin.left - 5, toY(val) + 3);
-  }
+  for (let i = 0; i <= 4; i++) ctx.fillText(Math.round((maxWater*i)/4), margin.left - 5, toY((maxWater*i)/4) + 3);
   ctx.textAlign = 'center';
-  for (let i = 1; i <= 4; i++) {
-    const val = Math.round((maxTime * i) / 4);
-    ctx.fillText(val, toX(val), height - margin.bottom + 12);
-  }
+  for (let i = 1; i <= 4; i++) ctx.fillText(Math.round((maxTime*i)/4), toX((maxTime*i)/4), height - margin.bottom + 12);
 }
 
-// Публичные функции рисования, используемые в разных местах
 function drawChart(canvas, points) {
-  const totalWater = parseFloat(coffeeWater?.value);
-  const allPoints = buildChartPoints(points, isNaN(totalWater) ? 0 : totalWater);
-  drawStepChart(canvas, allPoints);
+  const totalWater = parseFloat(coffeeWater?.value) || 0;
+  drawStepChart(canvas, buildChartPoints(points, totalWater));
 }
 
 function drawChartWithPoints(canvas, points) {
-  // В карточке сохранённого рецепта — без поля "общая вода"
-  const allPoints = buildChartPoints(points, 0);
-  drawStepChart(canvas, allPoints);
+  drawStepChart(canvas, buildChartPoints(points, 0));
 }
 
-// Список точек и перерисовка
 function renderPointsList() {
   if (!coffeePointsList) return;
   coffeePointsList.innerHTML = '';
   currentPoints.forEach((point, index) => {
-    const timeStr = formatTime(point.time);
     const tag = document.createElement('span');
     tag.className = 'coffee-point-tag';
-    tag.innerHTML = `${timeStr} / ${point.water}мл <button class="remove-point" data-index="${index}">✕</button>`;
+    tag.innerHTML = `${formatTime(point.time)} / ${point.water}мл <button class="remove-point" data-index="${index}">✕</button>`;
     tag.querySelector('.remove-point').addEventListener('click', (e) => {
       e.stopPropagation();
       currentPoints.splice(index, 1);
@@ -725,19 +638,12 @@ function renderPointsList() {
   drawChart(coffeeChartCanvas, currentPoints);
 }
 
-// Добавление точки
 addPointBtn.addEventListener('click', () => {
   const timeStr = pointTimeInput.value.trim();
   const water = parseFloat(pointWaterInput.value);
-  if (!timeStr || isNaN(water) || water < 0) {
-    showToast('Введите корректные значения', 'error');
-    return;
-  }
+  if (!timeStr || isNaN(water) || water < 0) { showToast('Введите корректные значения', 'error'); return; }
   const timeSeconds = parseTimeString(timeStr);
-  if (isNaN(timeSeconds) || timeSeconds < 0) {
-    showToast('Некорректный формат времени', 'error');
-    return;
-  }
+  if (isNaN(timeSeconds) || timeSeconds < 0) { showToast('Некорректный формат времени', 'error'); return; }
   currentPoints.push({ time: timeSeconds, water });
   currentPoints.sort((a, b) => a.time - b.time);
   pointTimeInput.value = '';
@@ -745,7 +651,6 @@ addPointBtn.addEventListener('click', () => {
   renderPointsList();
 });
 
-// Сброс формы
 function resetCoffeeForm() {
   coffeeName.value = '';
   coffeeProcessing.value = '';
@@ -759,18 +664,12 @@ function resetCoffeeForm() {
   renderPointsList();
 }
 
-// Сохранение рецепта
 coffeeSaveBtn.addEventListener('click', async () => {
   if (!currentUser) return;
-  
   const name = coffeeName.value.trim();
-  if (!name) {
-    showToast('Введите название', 'error');
-    return;
-  }
-  
+  if (!name) { showToast('Введите название', 'error'); return; }
   const recipe = {
-    name: name,
+    name,
     processing: coffeeProcessing.value.trim() || null,
     roastDate: coffeeRoastDate.value || null,
     dose: coffeeDose.value ? parseFloat(coffeeDose.value) : null,
@@ -781,51 +680,37 @@ coffeeSaveBtn.addEventListener('click', async () => {
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
   };
-  
   try {
     await addDoc(collection(db, 'family', 'shared', 'coffee'), recipe);
     showToast('Рецепт сохранён');
     resetCoffeeForm();
   } catch (error) {
-    console.error('Ошибка сохранения рецепта:', error);
+    console.error('Ошибка:', error);
     showToast('Ошибка', 'error');
   }
 });
 
-// Загрузка рецептов
 function loadCoffeeRecipes() {
   if (unsubscribeCoffee) unsubscribeCoffee();
-  
   const q = query(collection(db, 'family', 'shared', 'coffee'), orderBy('createdAt', 'desc'));
-  
   unsubscribeCoffee = onSnapshot(q, (snapshot) => {
     coffeeRecipesList.innerHTML = '';
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      renderCoffeeRecipe(docSnap.id, data);
-    });
+    snapshot.forEach(docSnap => renderCoffeeRecipe(docSnap.id, docSnap.data()));
   }, error => console.error('Ошибка загрузки рецептов:', error));
 }
 
-// Отрисовка карточки рецепта
 function renderCoffeeRecipe(id, data) {
   const card = document.createElement('div');
   card.className = 'coffee-recipe-card';
-  
-  const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : 'не указана';
-  
-  let pointsStr = '';
-  if (data.points && data.points.length > 0) {
-    pointsStr = data.points.map(p => `${formatTime(p.time)} / ${p.water}мл`).join(', ');
-  }
-  
+  const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : null;
+  const pointsStr = data.points?.length > 0 ? data.points.map(p => `${formatTime(p.time)} / ${p.water}мл`).join(', ') : '';
   const canvasId = `chart-${id}`;
-  
+
   card.innerHTML = `
     <div class="coffee-recipe-name">${data.name}</div>
     <div class="coffee-recipe-detail">
       ${data.processing ? `<span>🌱 ${data.processing}</span>` : ''}
-      ${data.roastDate ? `<span>🔥 Обжарка: ${roastDateStr}</span>` : ''}
+      ${roastDateStr ? `<span>🔥 Обжарка: ${roastDateStr}</span>` : ''}
       ${data.dose ? `<span>⚖️ ${data.dose}г</span>` : ''}
     </div>
     <div class="coffee-recipe-detail">
@@ -841,7 +726,7 @@ function renderCoffeeRecipe(id, data) {
       <button class="coffee-recipe-delete" data-id="${id}">🗑️</button>
     </div>
   `;
-  
+
   card.querySelector('.coffee-recipe-delete').addEventListener('click', async (e) => {
     e.stopPropagation();
     if (confirm('Удалить рецепт?')) {
@@ -849,19 +734,17 @@ function renderCoffeeRecipe(id, data) {
         await deleteDoc(doc(db, 'family', 'shared', 'coffee', id));
         showToast('Рецепт удалён');
       } catch (error) {
-        console.error('Ошибка удаления:', error);
         showToast('Ошибка', 'error');
       }
     }
   });
-  
+
   coffeeRecipesList.appendChild(card);
 
-  // ИСПРАВЛЕНО: requestAnimationFrame гарантирует что canvas уже в DOM и имеет размер
   requestAnimationFrame(() => {
     const chartCanvas = document.getElementById(canvasId);
     if (!chartCanvas) return;
-    if (data.points && data.points.length > 0) {
+    if (data.points?.length > 0) {
       drawChartWithPoints(chartCanvas, data.points);
     } else {
       const ctx = chartCanvas.getContext('2d');
@@ -874,61 +757,36 @@ function renderCoffeeRecipe(id, data) {
   });
 }
 
-// Слушатели кофе-формы
 if (coffeeRoastDate) {
   coffeeRoastDate.addEventListener('change', updateCoffeeAge);
   coffeeRoastDate.addEventListener('blur', updateCoffeeAge);
 }
-
-if (coffeeWater) {
-  coffeeWater.addEventListener('input', () => {
-    drawChart(coffeeChartCanvas, currentPoints);
-  });
-}
+if (coffeeWater) coffeeWater.addEventListener('input', () => drawChart(coffeeChartCanvas, currentPoints));
 
 window.updateCoffeeAge = updateCoffeeAge;
 
-// ---------- QR-коды ----------
+// ── QR-коды ──
 function showQRModal(imageSrc, storeName) {
   if (document.querySelector('.qr-modal')) return;
-
   const modal = document.createElement('div');
   modal.className = 'qr-modal';
-  
   const content = document.createElement('div');
   content.className = 'qr-modal-content';
-  
   const img = document.createElement('img');
   img.src = imageSrc;
   img.alt = `QR-код ${storeName}`;
-  
   const closeBtn = document.createElement('button');
   closeBtn.className = 'qr-modal-close';
   closeBtn.innerHTML = '✕';
   closeBtn.addEventListener('click', () => modal.remove());
-  
   content.appendChild(img);
   content.appendChild(closeBtn);
   modal.appendChild(content);
-  
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.remove();
-  });
-  
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
 }
 
 const qrMagnitBtn = document.getElementById('qr-magnit-btn');
 const qrPyaterochkaBtn = document.getElementById('qr-pyaterochka-btn');
-
-if (qrMagnitBtn) {
-  qrMagnitBtn.addEventListener('click', () => {
-    showQRModal('icons/qr-magnit.png', 'Магнит');
-  });
-}
-
-if (qrPyaterochkaBtn) {
-  qrPyaterochkaBtn.addEventListener('click', () => {
-    showQRModal('icons/qr-pyaterochka.png', 'Пятёрочка');
-  });
-}
+if (qrMagnitBtn) qrMagnitBtn.addEventListener('click', () => showQRModal('icons/qr-magnit.png', 'Магнит'));
+if (qrPyaterochkaBtn) qrPyaterochkaBtn.addEventListener('click', () => showQRModal('icons/qr-pyaterochka.png', 'Пятёрочка'));

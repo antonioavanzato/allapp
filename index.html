@@ -213,13 +213,5 @@
   <div id="toast-message" class="toast hidden">✅ Добавлено</div>
 
   <script type="module" src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('firebase-messaging-sw.js');
-        navigator.serviceWorker.register('sw.js');
-      });
-    }
-  </script>
 </body>
 </html>

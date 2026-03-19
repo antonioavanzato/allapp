@@ -151,7 +151,7 @@ function showToast(message, type = 'success') {
   setTimeout(() => toast.classList.add('hidden'), 2000);
 }
 
-// ── Offline-индикатор (после showToast — важно!) ──
+// ── Offline-индикатор ──
 const offlineBar = document.createElement('div');
 offlineBar.className = 'offline-bar';
 offlineBar.textContent = '⚡ Нет соединения — изменения сохранятся при подключении';
@@ -167,16 +167,32 @@ function setOfflineState(isOffline) {
   }
 }
 
-if (!navigator.onLine) setOfflineState(true);
+// Проверка через fetch — надёжно на iOS
+async function checkOnline() {
+  try {
+    await fetch('https://www.gstatic.com/generate_204', {
+      method: 'HEAD',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(3000)
+    });
+    if (document.body.classList.contains('is-offline')) {
+      setOfflineState(false);
+      setTimeout(() => showToast('Соединение восстановлено', 'success'), 100);
+    }
+  } catch {
+    setOfflineState(true);
+  }
+}
 
-window.addEventListener('online', () => {
-  setOfflineState(false);
-  showToast('Соединение восстановлено', 'success');
-});
+// Начальная проверка
+checkOnline();
 
-window.addEventListener('offline', () => {
-  setOfflineState(true);
-});
+// Polling каждые 5 секунд
+setInterval(checkOnline, 5000);
+
+// Нативные события как дополнение
+window.addEventListener('online', () => checkOnline());
+window.addEventListener('offline', () => setOfflineState(true));
 
 // ── Scroll helper ──
 function scrollToNewItem() {

@@ -158,9 +158,7 @@ onAuthStateChanged(auth, (user) => {
     currentUser = user;
     authScreen.classList.add('hidden');
     mainApp.classList.remove('hidden');
-    // По умолчанию показываем покупки
     switchTab('shopping');
-    // Запрос уведомлений
     if (Notification.permission === 'default') Notification.requestPermission();
   } else {
     currentUser = null;
@@ -174,7 +172,7 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Функция переключения вкладок (добавлено управление видимостью кнопок QR)
+// Функция переключения вкладок
 function switchTab(tab) {
   currentTab = tab;
   
@@ -190,7 +188,6 @@ function switchTab(tab) {
     else if (tab === 'coffee') pageTitle.textContent = 'Кофе';
   }
   
-  // Управление видимостью блока с кнопками QR (показываем только в покупках)
   const shopButtons = document.getElementById('header-shop-buttons');
   if (shopButtons) {
     shopButtons.style.display = tab === 'shopping' ? 'flex' : 'none';
@@ -222,13 +219,12 @@ function switchTab(tab) {
     if (calendarContainer) calendarContainer.classList.add('hidden');
     if (coffeeSection) coffeeSection.classList.remove('hidden');
     
-    // Сбросить форму и точки
     resetCoffeeForm();
     loadCoffeeRecipes();
   }
 }
 
-// Загрузка данных списка (shopping / tasks)
+// Загрузка данных списка
 function loadListData() {
   if (unsubscribe) unsubscribe();
   if (!currentUser) return;
@@ -247,7 +243,7 @@ function loadListData() {
   }, error => console.error('Ошибка загрузки:', error));
 }
 
-// Добавление элемента (для shopping / tasks)
+// Добавление элемента
 async function addItem() {
   const text = itemInput?.value.trim();
   if (!text || !currentUser) return;
@@ -293,7 +289,8 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   });
 });
 
-// Отрисовка элемента списка (shopping / tasks)
+// Отрисовка элемента списка
+// ИСПРАВЛЕНО: убрана утечка через window.addEventListener('mousemove')
 function renderItem(id, item) {
   if (!itemsList) return;
   const li = document.createElement('li');
@@ -349,6 +346,10 @@ function renderItem(id, item) {
     li.classList.remove('is-swiping');
     li.classList.remove('swiping-right', 'swiping-left');
     
+    // Убираем локальные mouse-обработчики сразу после окончания жеста
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', end);
+    
     try {
       if (translateX > threshold) {
         const docRef = doc(db, 'family', 'shared', currentTab, id);
@@ -372,24 +373,29 @@ function renderItem(id, item) {
     translateX = 0;
   };
 
+  // Touch — на элементе
   li.addEventListener('touchstart', start, { passive: true });
   li.addEventListener('touchmove', move, { passive: false });
   li.addEventListener('touchend', end);
-  li.addEventListener('mousedown', start);
-  window.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', end);
+
+  // Mouse — добавляем move/up на document только во время активного свайпа
+  li.addEventListener('mousedown', e => {
+    start(e);
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', end);
+  });
 
   itemsList.appendChild(li);
 }
 
-// Навигация по вкладкам
+// Навигация
 navItems.forEach(nav => {
   nav.addEventListener('click', () => {
     switchTab(nav.dataset.tab);
   });
 });
 
-// Сворачивание блока быстрых продуктов (по умолчанию свернут)
+// Быстрые продукты (сворачиваемый блок)
 const quickToggle = document.getElementById('quick-toggle');
 const quickGrid = document.getElementById('quick-grid');
 const quickArrow = document.getElementById('quick-arrow');
@@ -409,7 +415,7 @@ if (quickToggle && quickGrid && quickArrow) {
   });
 }
 
-// ---------- Календарь для Альбуса ----------
+// ---------- Календарь ----------
 function loadCalendar() {
   if (unsubscribeCalendar) unsubscribeCalendar();
   renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
@@ -501,9 +507,8 @@ if (prevMonthBtn && nextMonthBtn) {
   });
 }
 
-// ---------- Кофе: рецепты ----------
+// ---------- Кофе ----------
 
-// Преобразование строки "мм:сс" в секунды
 function parseTimeString(str) {
   if (!str) return 0;
   const parts = str.split(':');
@@ -511,20 +516,16 @@ function parseTimeString(str) {
     const minutes = parseInt(parts[0], 10) || 0;
     const seconds = parseInt(parts[1], 10) || 0;
     return minutes * 60 + seconds;
-  } else {
-    // Если просто число, считаем секундами
-    return parseInt(str, 10) || 0;
   }
+  return parseInt(str, 10) || 0;
 }
 
-// Преобразование секунд в формат "мм:сс"
 function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
-// Вычисление возраста кофе
 function updateCoffeeAge() {
   const dateStr = coffeeRoastDate.value;
   if (!dateStr) {
@@ -540,8 +541,40 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-// Обновление графика с учётом поля "Общая вода"
-function drawChart(canvas, points) {
+// ============================================================
+// ИСПРАВЛЕННЫЙ ГРАФИК
+// Логика V60: заварка идёт порциями — линия всегда стартует
+// с (0,0), каждая точка — момент начала влива.
+// Ступенька: сначала вертикально вверх до нового значения воды,
+// затем горизонтально вправо до следующего времени.
+// Финальная точка из поля "Общая вода" добавляется правее
+// последней точки вливания.
+// ============================================================
+
+function buildChartPoints(points, totalWater) {
+  // Всегда начинаем с (0, 0)
+  const base = [{ time: 0, water: 0 }];
+  const sorted = [...points].sort((a, b) => a.time - b.time);
+  const all = [...base, ...sorted];
+
+  // Финальная точка "общая вода" — добавляем если задана
+  // и её значение >= последней точки, а время чуть правее
+  if (totalWater && totalWater > 0 && sorted.length > 0) {
+    const lastPoint = sorted[sorted.length - 1];
+    // Если общая вода больше последней точки — добавляем финал
+    // Время берём как lastPoint.time + разумный шаг (10 сек)
+    if (totalWater >= lastPoint.water) {
+      all.push({ time: lastPoint.time + 10, water: totalWater });
+    }
+  } else if (totalWater && totalWater > 0 && sorted.length === 0) {
+    // Точек нет, только общая вода — показываем хотя бы один столбик
+    all.push({ time: 30, water: totalWater });
+  }
+
+  return all;
+}
+
+function drawStepChart(canvas, allPoints) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const width = canvas.width;
@@ -549,138 +582,131 @@ function drawChart(canvas, points) {
 
   ctx.clearRect(0, 0, width, height);
 
-  // Собираем все точки для отрисовки: существующие + финальная точка из поля "Общая вода"
-  let allPoints = [...points];
-  const totalWater = parseFloat(coffeeWater.value);
-  if (!isNaN(totalWater) && totalWater > 0) {
-    // Если есть точки, берём максимальное время, иначе 0
-    const maxTime = points.length > 0 ? Math.max(...points.map(p => p.time)) : 0;
-    // Добавляем финальную точку (она будет последней)
-    allPoints.push({ time: maxTime, water: totalWater });
-  }
-
-  if (allPoints.length === 0) {
+  if (allPoints.length < 2) {
     ctx.font = '12px -apple-system';
-    ctx.fillStyle = 'var(--text-muted)';
+    ctx.fillStyle = '#8e8e93';
     ctx.textAlign = 'center';
-    ctx.fillText('Нет данных', width/2, height/2);
+    ctx.fillText('Добавьте точки вливания', width / 2, height / 2);
     return;
   }
 
-  // Сортируем по времени
-  allPoints.sort((a, b) => a.time - b.time);
-
-  // Отступы для осей
   const margin = { left: 45, top: 20, right: 20, bottom: 35 };
   const graphW = width - margin.left - margin.right;
   const graphH = height - margin.top - margin.bottom;
 
-  // Максимальные значения
-  const maxTime = Math.max(...allPoints.map(p => p.time), 1);
-  const maxWater = Math.max(...allPoints.map(p => p.water), 1);
+  const maxTime = Math.max(...allPoints.map(p => p.time));
+  const maxWater = Math.max(...allPoints.map(p => p.water));
 
-  // Рисуем сетку
-  ctx.strokeStyle = 'rgba(142, 142, 147, 0.3)';
+  if (maxTime === 0 || maxWater === 0) return;
+
+  const toX = t => margin.left + (t / maxTime) * graphW;
+  const toY = w => (height - margin.bottom) - (w / maxWater) * graphH;
+
+  // Сетка
+  ctx.strokeStyle = 'rgba(142, 142, 147, 0.25)';
   ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 5; i++) {
-    const yVal = (maxWater * i) / 5;
-    const y = height - margin.bottom - (yVal / maxWater) * graphH;
-    ctx.beginPath();
-    ctx.moveTo(margin.left, y);
-    ctx.lineTo(width - margin.right, y);
-    ctx.stroke();
-  }
-  for (let i = 0; i <= 5; i++) {
-    const xVal = (maxTime * i) / 5;
-    const x = margin.left + (xVal / maxTime) * graphW;
-    ctx.beginPath();
-    ctx.moveTo(x, margin.top);
-    ctx.lineTo(x, height - margin.bottom);
-    ctx.stroke();
+  for (let i = 0; i <= 4; i++) {
+    const y = toY((maxWater * i) / 4);
+    ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(width - margin.right, y); ctx.stroke();
+    const x = toX((maxTime * i) / 4);
+    ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, height - margin.bottom); ctx.stroke();
   }
 
-  // Рисуем оси
-  ctx.strokeStyle = 'var(--text-main)';
-  ctx.lineWidth = 1.5;
+  // Оси
+  ctx.strokeStyle = '#8e8e93';
+  ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(margin.left, margin.top);
   ctx.lineTo(margin.left, height - margin.bottom);
   ctx.lineTo(width - margin.right, height - margin.bottom);
   ctx.stroke();
 
-  // Рисуем ступенчатый график
+  // Ступенчатая линия: от (0,0) вверх до water[i], потом горизонтально до time[i+1]
   ctx.strokeStyle = '#ff9f0a';
   ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
   ctx.beginPath();
-  
-  for (let i = 0; i < allPoints.length - 1; i++) {
-    const p1 = allPoints[i];
-    const p2 = allPoints[i + 1];
-    
-    const x1 = margin.left + (p1.time / maxTime) * graphW;
-    const y1 = (height - margin.bottom) - (p1.water / maxWater) * graphH;
-    const x2 = margin.left + (p2.time / maxTime) * graphW;
-    const y2 = (height - margin.bottom) - (p2.water / maxWater) * graphH;
-    
-    if (i === 0) ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y1);
-    ctx.lineTo(x2, y2);
+  ctx.moveTo(toX(allPoints[0].time), toY(allPoints[0].water)); // (0,0)
+
+  for (let i = 1; i < allPoints.length; i++) {
+    const prev = allPoints[i - 1];
+    const curr = allPoints[i];
+    // Вертикально вверх до curr.water на том же времени prev.time
+    ctx.lineTo(toX(prev.time), toY(curr.water));
+    // Горизонтально вправо до curr.time
+    ctx.lineTo(toX(curr.time), toY(curr.water));
   }
   ctx.stroke();
 
-  // Рисуем точки (для всех точек, включая финальную)
-  ctx.fillStyle = '#ff9f0a';
-  allPoints.forEach(p => {
-    const x = margin.left + (p.time / maxTime) * graphW;
-    const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
-    
-    ctx.beginPath();
-    ctx.arc(x, y, 7, 0, 2 * Math.PI);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-    
+  // Закрашенная область под графиком
+  ctx.fillStyle = 'rgba(255, 159, 10, 0.08)';
+  ctx.beginPath();
+  ctx.moveTo(toX(allPoints[0].time), toY(allPoints[0].water));
+  for (let i = 1; i < allPoints.length; i++) {
+    const prev = allPoints[i - 1];
+    const curr = allPoints[i];
+    ctx.lineTo(toX(prev.time), toY(curr.water));
+    ctx.lineTo(toX(curr.time), toY(curr.water));
+  }
+  ctx.lineTo(toX(allPoints[allPoints.length - 1].time), toY(0));
+  ctx.lineTo(toX(0), toY(0));
+  ctx.closePath();
+  ctx.fill();
+
+  // Точки (только реальные точки вливания, не (0,0))
+  allPoints.slice(1).forEach(p => {
+    const x = toX(p.time);
+    const y = toY(p.water);
     ctx.beginPath();
     ctx.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
     ctx.fillStyle = '#ff9f0a';
     ctx.fill();
   });
 
   // Подписи осей
   ctx.font = '10px -apple-system';
-  ctx.fillStyle = 'var(--text-main)';
+  ctx.fillStyle = '#8e8e93';
   ctx.textAlign = 'center';
-  ctx.fillText('Время (сек)', width/2, height - 5);
+  ctx.fillText('Время (сек)', width / 2, height - 2);
   ctx.save();
-  ctx.translate(15, height/2);
-  ctx.rotate(-Math.PI/2);
+  ctx.translate(12, height / 2);
+  ctx.rotate(-Math.PI / 2);
   ctx.fillText('Вода (мл)', 0, 0);
   ctx.restore();
 
-  // Подписи значений на осях
+  // Подписи значений
   ctx.font = '9px -apple-system';
-  ctx.fillStyle = 'var(--text-muted)';
+  ctx.fillStyle = '#8e8e93';
   ctx.textAlign = 'right';
-  ctx.fillText('0', margin.left - 5, height - margin.bottom + 3);
-  ctx.fillText(maxWater.toString(), margin.left - 5, margin.top + 5);
-  ctx.textAlign = 'center';
-  ctx.fillText(maxTime.toString(), width - margin.right + 15, height - margin.bottom + 5);
-  
-  ctx.font = '8px -apple-system';
-  ctx.textAlign = 'center';
-  for (let i = 1; i <= 4; i++) {
-    const xVal = Math.round((maxTime * i) / 5);
-    const x = margin.left + (xVal / maxTime) * graphW;
-    ctx.fillText(xVal, x, height - margin.bottom + 12);
+  for (let i = 0; i <= 4; i++) {
+    const val = Math.round((maxWater * i) / 4);
+    ctx.fillText(val, margin.left - 5, toY(val) + 3);
   }
-  ctx.textAlign = 'right';
+  ctx.textAlign = 'center';
   for (let i = 1; i <= 4; i++) {
-    const yVal = Math.round((maxWater * i) / 5);
-    const y = height - margin.bottom - (yVal / maxWater) * graphH;
-    ctx.fillText(yVal, margin.left - 8, y + 3);
+    const val = Math.round((maxTime * i) / 4);
+    ctx.fillText(val, toX(val), height - margin.bottom + 12);
   }
 }
 
-// Обновление списка точек и графика
+// Публичные функции рисования, используемые в разных местах
+function drawChart(canvas, points) {
+  const totalWater = parseFloat(coffeeWater?.value);
+  const allPoints = buildChartPoints(points, isNaN(totalWater) ? 0 : totalWater);
+  drawStepChart(canvas, allPoints);
+}
+
+function drawChartWithPoints(canvas, points) {
+  // В карточке сохранённого рецепта — без поля "общая вода"
+  const allPoints = buildChartPoints(points, 0);
+  drawStepChart(canvas, allPoints);
+}
+
+// Список точек и перерисовка
 function renderPointsList() {
   if (!coffeePointsList) return;
   coffeePointsList.innerHTML = '';
@@ -830,117 +856,30 @@ function renderCoffeeRecipe(id, data) {
   });
   
   coffeeRecipesList.appendChild(card);
-  
-  const chartCanvas = document.getElementById(canvasId);
-  if (chartCanvas && data.points && data.points.length > 0) {
-    // Для отображения в карточке используем только сохранённые точки, без учёта поля общей воды
-    const ctx = chartCanvas.getContext('2d');
-    drawChartWithPoints(chartCanvas, data.points);
-  } else if (chartCanvas) {
-    const ctx = chartCanvas.getContext('2d');
-    ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
-    ctx.font = '12px -apple-system';
-    ctx.fillStyle = 'var(--text-muted)';
-    ctx.textAlign = 'center';
-    ctx.fillText('Нет данных', chartCanvas.width/2, chartCanvas.height/2);
-  }
-}
 
-// Вспомогательная функция для отрисовки графика в карточке (без учёта поля общей воды)
-function drawChartWithPoints(canvas, points) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
-
-  ctx.clearRect(0, 0, width, height);
-
-  if (!points || points.length === 0) {
-    ctx.font = '12px -apple-system';
-    ctx.fillStyle = 'var(--text-muted)';
-    ctx.textAlign = 'center';
-    ctx.fillText('Нет данных', width/2, height/2);
-    return;
-  }
-
-  const sortedPoints = [...points].sort((a, b) => a.time - b.time);
-  const allPoints = (sortedPoints[0].time !== 0 || sortedPoints[0].water !== 0) 
-    ? [{ time: 0, water: 0 }, ...sortedPoints] 
-    : sortedPoints;
-
-  const margin = { left: 45, top: 20, right: 20, bottom: 35 };
-  const graphW = width - margin.left - margin.right;
-  const graphH = height - margin.top - margin.bottom;
-
-  const maxTime = Math.max(...sortedPoints.map(p => p.time), 1);
-  const maxWater = Math.max(...sortedPoints.map(p => p.water), 1);
-
-  // Рисуем сетку (упрощённо)
-  ctx.strokeStyle = 'rgba(142, 142, 147, 0.3)';
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 5; i++) {
-    const yVal = (maxWater * i) / 5;
-    const y = height - margin.bottom - (yVal / maxWater) * graphH;
-    ctx.beginPath();
-    ctx.moveTo(margin.left, y);
-    ctx.lineTo(width - margin.right, y);
-    ctx.stroke();
-  }
-  for (let i = 0; i <= 5; i++) {
-    const xVal = (maxTime * i) / 5;
-    const x = margin.left + (xVal / maxTime) * graphW;
-    ctx.beginPath();
-    ctx.moveTo(x, margin.top);
-    ctx.lineTo(x, height - margin.bottom);
-    ctx.stroke();
-  }
-
-  ctx.strokeStyle = 'var(--text-main)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(margin.left, margin.top);
-  ctx.lineTo(margin.left, height - margin.bottom);
-  ctx.lineTo(width - margin.right, height - margin.bottom);
-  ctx.stroke();
-
-  ctx.strokeStyle = '#ff9f0a';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  for (let i = 0; i < allPoints.length - 1; i++) {
-    const p1 = allPoints[i];
-    const p2 = allPoints[i + 1];
-    const x1 = margin.left + (p1.time / maxTime) * graphW;
-    const y1 = (height - margin.bottom) - (p1.water / maxWater) * graphH;
-    const x2 = margin.left + (p2.time / maxTime) * graphW;
-    const y2 = (height - margin.bottom) - (p2.water / maxWater) * graphH;
-    if (i === 0) ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y1);
-    ctx.lineTo(x2, y2);
-  }
-  ctx.stroke();
-
-  ctx.fillStyle = '#ff9f0a';
-  sortedPoints.forEach(p => {
-    const x = margin.left + (p.time / maxTime) * graphW;
-    const y = (height - margin.bottom) - (p.water / maxWater) * graphH;
-    ctx.beginPath();
-    ctx.arc(x, y, 5, 0, 2 * Math.PI);
-    ctx.fillStyle = '#ff9f0a';
-    ctx.fill();
-    // Белая обводка для наглядности
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+  // ИСПРАВЛЕНО: requestAnimationFrame гарантирует что canvas уже в DOM и имеет размер
+  requestAnimationFrame(() => {
+    const chartCanvas = document.getElementById(canvasId);
+    if (!chartCanvas) return;
+    if (data.points && data.points.length > 0) {
+      drawChartWithPoints(chartCanvas, data.points);
+    } else {
+      const ctx = chartCanvas.getContext('2d');
+      ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+      ctx.font = '12px -apple-system';
+      ctx.fillStyle = '#8e8e93';
+      ctx.textAlign = 'center';
+      ctx.fillText('Нет данных', chartCanvas.width / 2, chartCanvas.height / 2);
+    }
   });
 }
 
-// Слушатель для обновления возраста
+// Слушатели кофе-формы
 if (coffeeRoastDate) {
   coffeeRoastDate.addEventListener('change', updateCoffeeAge);
   coffeeRoastDate.addEventListener('blur', updateCoffeeAge);
 }
 
-// Слушатель для поля "Общая вода" – перерисовываем график при изменении
 if (coffeeWater) {
   coffeeWater.addEventListener('input', () => {
     drawChart(coffeeChartCanvas, currentPoints);
@@ -949,10 +888,8 @@ if (coffeeWater) {
 
 window.updateCoffeeAge = updateCoffeeAge;
 
-// ---------- QR-коды магазинов ----------
-// Функция для создания модального окна с QR-кодом
+// ---------- QR-коды ----------
 function showQRModal(imageSrc, storeName) {
-  // Проверяем, не открыто ли уже модальное окно
   if (document.querySelector('.qr-modal')) return;
 
   const modal = document.createElement('div');
@@ -968,15 +905,12 @@ function showQRModal(imageSrc, storeName) {
   const closeBtn = document.createElement('button');
   closeBtn.className = 'qr-modal-close';
   closeBtn.innerHTML = '✕';
-  closeBtn.addEventListener('click', () => {
-    modal.remove();
-  });
+  closeBtn.addEventListener('click', () => modal.remove());
   
   content.appendChild(img);
   content.appendChild(closeBtn);
   modal.appendChild(content);
   
-  // Закрытие по клику на фон
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.remove();
   });
@@ -984,7 +918,6 @@ function showQRModal(imageSrc, storeName) {
   document.body.appendChild(modal);
 }
 
-// Обработчики для кнопок
 const qrMagnitBtn = document.getElementById('qr-magnit-btn');
 const qrPyaterochkaBtn = document.getElementById('qr-pyaterochka-btn');
 

@@ -26,38 +26,10 @@ const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk
 
 let currentFCMToken = null;
 
-// ── Offline-индикатор ──
-const offlineBar = document.createElement('div');
-offlineBar.className = 'offline-bar';
-offlineBar.textContent = '⚡ Нет соединения — изменения сохранятся при подключении';
-document.body.prepend(offlineBar);
-
-function setOfflineState(isOffline) {
-  if (isOffline) {
-    document.body.classList.add('is-offline');
-    offlineBar.classList.add('visible');
-  } else {
-    document.body.classList.remove('is-offline');
-    offlineBar.classList.remove('visible');
-  }
-}
-
-if (!navigator.onLine) setOfflineState(true);
-
-window.addEventListener('online', () => {
-  setOfflineState(false);
-  showToast('Соединение восстановлено', 'success');
-});
-
-window.addEventListener('offline', () => {
-  setOfflineState(true);
-});
-
 // ── SW: проверка обновлений ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('firebase-messaging-sw.js');
-
     navigator.serviceWorker.register('sw.js').then((registration) => {
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
@@ -77,12 +49,9 @@ async function initFCMToken() {
     if (!('Notification' in window)) return;
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
-
     const token = await getToken(messaging, { vapidKey: VAPID_KEY });
     if (!token) return;
-
     currentFCMToken = token;
-
     const saveToken = httpsCallable(functions, 'saveUserToken');
     await saveToken({ token });
     console.log('FCM токен сохранён');
@@ -182,6 +151,34 @@ function showToast(message, type = 'success') {
   setTimeout(() => toast.classList.add('hidden'), 2000);
 }
 
+// ── Offline-индикатор (после showToast — важно!) ──
+const offlineBar = document.createElement('div');
+offlineBar.className = 'offline-bar';
+offlineBar.textContent = '⚡ Нет соединения — изменения сохранятся при подключении';
+document.body.prepend(offlineBar);
+
+function setOfflineState(isOffline) {
+  if (isOffline) {
+    document.body.classList.add('is-offline');
+    offlineBar.classList.add('visible');
+  } else {
+    document.body.classList.remove('is-offline');
+    offlineBar.classList.remove('visible');
+  }
+}
+
+if (!navigator.onLine) setOfflineState(true);
+
+window.addEventListener('online', () => {
+  setOfflineState(false);
+  showToast('Соединение восстановлено', 'success');
+});
+
+window.addEventListener('offline', () => {
+  setOfflineState(true);
+});
+
+// ── Scroll helper ──
 function scrollToNewItem() {
   setTimeout(() => {
     const lastItem = itemsList.lastElementChild;

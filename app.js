@@ -169,18 +169,12 @@ function setOfflineState(isOffline) {
 
 // Проверка через fetch — надёжно на iOS
 async function checkOnline() {
-  try {
-    await fetch('https://www.gstatic.com/generate_204', {
-      method: 'HEAD',
-      cache: 'no-store',
-      signal: AbortSignal.timeout(3000)
-    });
-    if (document.body.classList.contains('is-offline')) {
-      setOfflineState(false);
-      setTimeout(() => showToast('Соединение восстановлено', 'success'), 100);
-    }
-  } catch {
+  const isOnline = navigator.onLine;
+  if (!isOnline) {
     setOfflineState(true);
+  } else if (document.body.classList.contains('is-offline')) {
+    setOfflineState(false);
+    setTimeout(() => showToast('Соединение восстановлено', 'success'), 100);
   }
 }
 

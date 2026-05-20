@@ -205,7 +205,6 @@ h1 {
   letter-spacing: -0.03em;
 }
 
-/* Прямоугольные кнопки QR-кодов в стиле кошелька */
 .qr-icon-btn {
   background: var(--card-bg-solid);
   border: 1px solid var(--border);
@@ -506,12 +505,14 @@ li.swiping-left .swipe-content {
   border-radius: 16px 0 0 16px;
 }
 
-/* ── Bottom Navigation ── */
+/* ── Bottom Navigation (НАМЕРТВО ФИКСИРОВАННАЯ) ── */
 .bottom-nav {
-  position: absolute;
+  position: fixed; /* Намертво прибивает к экрану устройства */
   bottom: 20px;
-  left: 20px;
+  left: 50%;
+  transform: translateX(-50%); /* Идеально центрирует на ПК и мобильном */
   width: calc(100% - 40px);
+  max-width: 440px; /* Чтобы рамка навигации не вылезала за пределы приложения на ПК */
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -521,7 +522,7 @@ li.swiping-left .swipe-content {
   justify-content: space-around;
   padding: 10px 8px;
   z-index: 100;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
 .nav-item {
@@ -974,5 +975,9 @@ li.swiping-left .swipe-content {
     font-size: 12px;
     padding: 7px 12px;
     border-radius: 12px;
+  }
+
+  .bottom-nav {
+    max-width: calc(100% - 40px);
   }
 }

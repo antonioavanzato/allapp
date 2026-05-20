@@ -38,6 +38,16 @@
   --accent-gradient: linear-gradient(135deg, #7a5af8, #4f29d6);
 }
 
+/* Настройки для Material Symbols */
+.material-symbols-outlined {
+  font-size: 16px;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -49,8 +59,8 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
   background-color: #0d0d0e;
   color: var(--text-main);
-  height: 100dvh; /* Задаем жесткую динамическую высоту */
-  overflow: hidden; /* Запрещаем резиновый скролл самого PWA */
+  height: 100dvh;
+  overflow: hidden;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   display: flex;
@@ -61,14 +71,14 @@ body {
 #main-app, #auth-screen {
   width: 100%;
   max-width: 480px;
-  height: 100dvh; /* Жестко фиксируем интерфейс в границах экрана смартфона */
+  height: 100dvh;
   margin: 0 auto;
   background: var(--bg-gradient);
   position: relative;
   display: flex;
   flex-direction: column;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
-  overflow: hidden; /* Предотвращаем любые вылеты за границы */
+  overflow: hidden;
 }
 
 .screen {
@@ -184,7 +194,7 @@ body {
   transform: translateY(0);
 }
 
-/* ── Header (Отступы под Dynamic Island) ── */
+/* ── Header ── */
 .header {
   padding: calc(env(safe-area-inset-top) + 8px) 20px 16px;
   position: sticky;
@@ -249,16 +259,16 @@ h1 {
   color: var(--text-main);
 }
 
-/* ── Content (Изолированная прокрутка контента) ── */
+/* ── Content ── */
 .content {
   padding: 16px 16px 0;
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto; /* Разрешаем скролл внутри этого блока */
-  -webkit-overflow-scrolling: touch; /* Нативная плавность инерции iOS */
-  padding-bottom: 120px; /* Безопасный отступ под парящее меню */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 120px;
 }
 
 /* ── Quick Products ── */
@@ -509,14 +519,14 @@ li.swiping-left .swipe-content {
   border-radius: 16px 0 0 16px;
 }
 
-/* ── Bottom Navigation (ФИКСИРОВАННАЯ И ПРИБИТАЯ К iOS HOME INDICATOR) ── */
+/* ── Bottom Navigation ── */
 .bottom-nav {
-  position: fixed; /* Позиционируем относительно экрана устройства */
-  bottom: calc(env(safe-area-inset-bottom) + 12px); /* Защищаем от наложения полоски iOS */
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
   left: 50%;
-  transform: translateX(-50%); /* Идеальное центрирование на любом экране */
-  width: calc(100% - 32px); /* Изящный отступ от углов корпуса iPhone */
-  max-width: 448px; /* Ограничиваем рамку, чтобы она не растягивалась на десктопном симуляторе */
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 448px;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -681,86 +691,6 @@ li.swiping-left .swipe-content {
   border: 1px solid var(--border);
 }
 
-.coffee-chart-container {
-  margin-top: 4px;
-  background: rgba(0, 0, 0, 0.02);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-.coffee-chart-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 10px;
-}
-
-.coffee-chart {
-  width: 100%;
-  height: auto;
-  background: var(--card-bg-solid);
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  margin-bottom: 12px;
-  display: block;
-}
-
-.coffee-points {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
-  min-height: 28px;
-}
-
-.coffee-point-tag {
-  background: var(--accent-gradient);
-  color: white;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.15);
-}
-
-.coffee-point-tag .remove-point {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0 2px;
-  line-height: 1;
-}
-
-.coffee-add-point {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.coffee-small-btn {
-  background: var(--accent-gradient);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.15);
-  transition: var(--transition-spring);
-}
-
 .coffee-save-btn {
   background: var(--accent-gradient);
   color: white;
@@ -814,8 +744,9 @@ li.swiping-left .swipe-content {
   color: var(--text-muted);
   margin: 6px 0;
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
 }
 
 .coffee-recipe-detail span {
@@ -826,6 +757,8 @@ li.swiping-left .swipe-content {
   font-size: 12px;
   font-weight: 600;
   border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
 }
 
 .coffee-recipe-actions {
@@ -940,10 +873,6 @@ li.swiping-left .swipe-content {
 
   .quick-btn {
     background: rgba(255, 255, 255, 0.04);
-  }
-
-  .coffee-chart-container {
-    background: rgba(255, 255, 255, 0.02);
   }
 
   .coffee-age {

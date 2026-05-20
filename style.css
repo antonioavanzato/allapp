@@ -49,7 +49,8 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
   background-color: #0d0d0e;
   color: var(--text-main);
-  min-height: 100vh;
+  height: 100dvh; /* Задаем жесткую динамическую высоту */
+  overflow: hidden; /* Запрещаем резиновый скролл самого PWA */
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   display: flex;
@@ -60,13 +61,14 @@ body {
 #main-app, #auth-screen {
   width: 100%;
   max-width: 480px;
-  min-height: 100vh;
+  height: 100dvh; /* Жестко фиксируем интерфейс в границах экрана смартфона */
   margin: 0 auto;
   background: var(--bg-gradient);
   position: relative;
   display: flex;
   flex-direction: column;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  overflow: hidden; /* Предотвращаем любые вылеты за границы */
 }
 
 .screen {
@@ -74,6 +76,8 @@ body {
   flex-direction: column;
   flex: 1;
   width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .hidden {
@@ -180,13 +184,9 @@ body {
   transform: translateY(0);
 }
 
-/* ── Header ── */
-#main-app {
-  padding-bottom: 110px;
-}
-
+/* ── Header (Отступы под Dynamic Island) ── */
 .header {
-  padding: 20px;
+  padding: calc(env(safe-area-inset-top) + 8px) 20px 16px;
   position: sticky;
   top: 0;
   background: rgba(245, 245, 247, 0.8);
@@ -197,6 +197,7 @@ body {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 h1 {
@@ -248,13 +249,16 @@ h1 {
   color: var(--text-main);
 }
 
-/* ── Content ── */
+/* ── Content (Изолированная прокрутка контента) ── */
 .content {
   padding: 16px 16px 0;
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto; /* Разрешаем скролл внутри этого блока */
+  -webkit-overflow-scrolling: touch; /* Нативная плавность инерции iOS */
+  padding-bottom: 120px; /* Безопасный отступ под парящее меню */
 }
 
 /* ── Quick Products ── */
@@ -505,14 +509,14 @@ li.swiping-left .swipe-content {
   border-radius: 16px 0 0 16px;
 }
 
-/* ── Bottom Navigation (НАМЕРТВО ФИКСИРОВАННАЯ) ── */
+/* ── Bottom Navigation (ФИКСИРОВАННАЯ И ПРИБИТАЯ К iOS HOME INDICATOR) ── */
 .bottom-nav {
-  position: fixed; /* Намертво прибивает к экрану устройства */
-  bottom: 20px;
+  position: fixed; /* Позиционируем относительно экрана устройства */
+  bottom: calc(env(safe-area-inset-bottom) + 12px); /* Защищаем от наложения полоски iOS */
   left: 50%;
-  transform: translateX(-50%); /* Идеально центрирует на ПК и мобильном */
-  width: calc(100% - 40px);
-  max-width: 440px; /* Чтобы рамка навигации не вылезала за пределы приложения на ПК */
+  transform: translateX(-50%); /* Идеальное центрирование на любом экране */
+  width: calc(100% - 32px); /* Изящный отступ от углов корпуса iPhone */
+  max-width: 448px; /* Ограничиваем рамку, чтобы она не растягивалась на десктопном симуляторе */
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -978,6 +982,6 @@ li.swiping-left .swipe-content {
   }
 
   .bottom-nav {
-    max-width: calc(100% - 40px);
+    max-width: calc(100% - 32px);
   }
 }

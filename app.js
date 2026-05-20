@@ -113,11 +113,6 @@ const coffeeTemp = document.getElementById('coffee-temp');
 const coffeeWater = document.getElementById('coffee-water');
 const coffeeSaveBtn = document.getElementById('coffee-save');
 const coffeeRecipesList = document.getElementById('coffee-recipes-list');
-const coffeeChartCanvas = document.getElementById('coffee-chart');
-const coffeePointsList = document.getElementById('coffee-points-list');
-const pointTimeInput = document.getElementById('point-time');
-const pointWaterInput = document.getElementById('point-water');
-const addPointBtn = document.getElementById('add-point-btn');
 
 let currentTab = 'shopping';
 let unsubscribe = null;
@@ -125,7 +120,6 @@ let unsubscribeCalendar = null;
 let unsubscribeCoffee = null;
 let currentUser = null;
 let currentCalendarDate = new Date();
-let currentPoints = [];
 
 const userNames = {
   'antonioavanzato@gmail.com': 'Антон',
@@ -534,19 +528,6 @@ if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => {
 });
 
 // ── Кофе ──
-function parseTimeString(str) {
-  if (!str) return 0;
-  const parts = str.split(':');
-  if (parts.length === 2) return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
-  return parseInt(str, 10) || 0;
-}
-
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-}
-
 function updateCoffeeAge() {
   const dateStr = coffeeRoastDate.value;
   if (!dateStr) { coffeeAgeSpan.textContent = '— дней'; return; }
@@ -557,145 +538,6 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
-function buildChartPoints(points, totalWater) {
-  const sorted = [...points].sort((a, b) => a.time - b.time);
-  const all = [{ time: 0, water: 0 }, ...sorted];
-  if (totalWater > 0 && sorted.length > 0) {
-    const last = sorted[sorted.length - 1];
-    if (totalWater >= last.water) all.push({ time: last.time + 10, water: totalWater });
-  } else if (totalWater > 0) {
-    all.push({ time: 30, water: totalWater });
-  }
-  return all;
-}
-
-function drawStepChart(canvas, allPoints) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const { width, height } = canvas;
-  ctx.clearRect(0, 0, width, height);
-
-  if (allPoints.length < 2) {
-    ctx.font = '12px -apple-system';
-    ctx.fillStyle = '#8e8e93';
-    ctx.textAlign = 'center';
-    ctx.fillText('Добавьте точки вливания', width / 2, height / 2);
-    return;
-  }
-
-  const margin = { left: 45, top: 20, right: 20, bottom: 35 };
-  const graphW = width - margin.left - margin.right;
-  const graphH = height - margin.top - margin.bottom;
-  const maxTime = Math.max(...allPoints.map(p => p.time));
-  const maxWater = Math.max(...allPoints.map(p => p.water));
-  if (!maxTime || !maxWater) return;
-
-  const toX = t => margin.left + (t / maxTime) * graphW;
-  const toY = w => (height - margin.bottom) - (w / maxWater) * graphH;
-
-  ctx.strokeStyle = 'rgba(142,142,147,0.25)';
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) {
-    const y = toY((maxWater * i) / 4);
-    ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(width - margin.right, y); ctx.stroke();
-    const x = toX((maxTime * i) / 4);
-    ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, height - margin.bottom); ctx.stroke();
-  }
-
-  ctx.strokeStyle = '#8e8e93';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(margin.left, margin.top);
-  ctx.lineTo(margin.left, height - margin.bottom);
-  ctx.lineTo(width - margin.right, height - margin.bottom);
-  ctx.stroke();
-
-  ctx.fillStyle = 'rgba(255,159,10,0.08)';
-  ctx.beginPath();
-  ctx.moveTo(toX(allPoints[0].time), toY(allPoints[0].water));
-  for (let i = 1; i < allPoints.length; i++) {
-    ctx.lineTo(toX(allPoints[i-1].time), toY(allPoints[i].water));
-    ctx.lineTo(toX(allPoints[i].time), toY(allPoints[i].water));
-  }
-  ctx.lineTo(toX(allPoints[allPoints.length-1].time), toY(0));
-  ctx.lineTo(toX(0), toY(0));
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.strokeStyle = '#ff9f0a';
-  ctx.lineWidth = 2.5;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(toX(allPoints[0].time), toY(allPoints[0].water));
-  for (let i = 1; i < allPoints.length; i++) {
-    ctx.lineTo(toX(allPoints[i-1].time), toY(allPoints[i].water));
-    ctx.lineTo(toX(allPoints[i].time), toY(allPoints[i].water));
-  }
-  ctx.stroke();
-
-  allPoints.slice(1).forEach(p => {
-    const x = toX(p.time), y = toY(p.water);
-    ctx.beginPath(); ctx.arc(x, y, 5, 0, 2*Math.PI);
-    ctx.fillStyle = '#ffffff'; ctx.fill();
-    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 2*Math.PI);
-    ctx.fillStyle = '#ff9f0a'; ctx.fill();
-  });
-
-  ctx.font = '10px -apple-system';
-  ctx.fillStyle = '#8e8e93';
-  ctx.textAlign = 'center';
-  ctx.fillText('Время (сек)', width / 2, height - 2);
-  ctx.save();
-  ctx.translate(12, height / 2);
-  ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Вода (мл)', 0, 0);
-  ctx.restore();
-  ctx.font = '9px -apple-system';
-  ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) ctx.fillText(Math.round((maxWater*i)/4), margin.left - 5, toY((maxWater*i)/4) + 3);
-  ctx.textAlign = 'center';
-  for (let i = 1; i <= 4; i++) ctx.fillText(Math.round((maxTime*i)/4), toX((maxTime*i)/4), height - margin.bottom + 12);
-}
-
-function drawChart(canvas, points) {
-  const totalWater = parseFloat(coffeeWater?.value) || 0;
-  drawStepChart(canvas, buildChartPoints(points, totalWater));
-}
-
-function drawChartWithPoints(canvas, points) {
-  drawStepChart(canvas, buildChartPoints(points, 0));
-}
-
-function renderPointsList() {
-  if (!coffeePointsList) return;
-  coffeePointsList.innerHTML = '';
-  currentPoints.forEach((point, index) => {
-    const tag = document.createElement('span');
-    tag.className = 'coffee-point-tag';
-    tag.innerHTML = `${formatTime(point.time)} / ${point.water}мл <button class="remove-point" data-index="${index}">✕</button>`;
-    tag.querySelector('.remove-point').addEventListener('click', (e) => {
-      e.stopPropagation();
-      currentPoints.splice(index, 1);
-      renderPointsList();
-    });
-    coffeePointsList.appendChild(tag);
-  });
-  drawChart(coffeeChartCanvas, currentPoints);
-}
-
-addPointBtn.addEventListener('click', () => {
-  const timeStr = pointTimeInput.value.trim();
-  const water = parseFloat(pointWaterInput.value);
-  if (!timeStr || isNaN(water) || water < 0) { showToast('Введите корректные значения', 'error'); return; }
-  const timeSeconds = parseTimeString(timeStr);
-  if (isNaN(timeSeconds) || timeSeconds < 0) { showToast('Некорректный формат времени', 'error'); return; }
-  currentPoints.push({ time: timeSeconds, water });
-  currentPoints.sort((a, b) => a.time - b.time);
-  pointTimeInput.value = '';
-  pointWaterInput.value = '';
-  renderPointsList();
-});
-
 function resetCoffeeForm() {
   coffeeName.value = '';
   coffeeProcessing.value = '';
@@ -705,8 +547,6 @@ function resetCoffeeForm() {
   coffeeGrind.value = '';
   coffeeTemp.value = '';
   coffeeWater.value = '';
-  currentPoints = [];
-  renderPointsList();
 }
 
 coffeeSaveBtn.addEventListener('click', async () => {
@@ -721,7 +561,7 @@ coffeeSaveBtn.addEventListener('click', async () => {
     grind: coffeeGrind.value ? parseInt(coffeeGrind.value) : null,
     temp: coffeeTemp.value ? parseFloat(coffeeTemp.value) : null,
     totalWater: coffeeWater.value ? parseInt(coffeeWater.value) : null,
-    points: currentPoints,
+    points: [],
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
   };
@@ -748,23 +588,23 @@ function renderCoffeeRecipe(id, data) {
   const card = document.createElement('div');
   card.className = 'coffee-recipe-card';
   const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : null;
-  const pointsStr = data.points?.length > 0 ? data.points.map(p => `${formatTime(p.time)} / ${p.water}мл`).join(', ') : '';
 
   card.innerHTML = `
     <div class="coffee-recipe-name">${data.name}</div>
     <div class="coffee-recipe-detail">
-      ${data.processing ? `<span>обработка: ${data.processing}</span>` : ''}
-      ${roastDateStr ? `<span>обжарка: ${roastDateStr}</span>` : ''}
-      ${data.dose ? `<span>дозировка: ${data.dose}г</span>` : ''}
+      ${data.processing ? `<span><span class="material-symbols-outlined">eco</span> ${data.processing}</span>` : ''}
+      ${roastDateStr ? `<span><span class="material-symbols-outlined">calendar_today</span> ${roastDateStr}</span>` : ''}
+      ${data.dose ? `<span><span class="material-symbols-outlined">scale</span> ${data.dose} г</span>` : ''}
     </div>
     <div class="coffee-recipe-detail">
-      ${data.grind ? `<span>помол: ${data.grind} кл.</span>` : ''}
-      ${data.temp ? `<span>темп.: ${data.temp}°C</span>` : ''}
-      ${data.totalWater ? `<span>вода: ${data.totalWater}мл</span>` : ''}
+      ${data.grind ? `<span><span class="material-symbols-outlined">tune</span> Помол: ${data.grind}</span>` : ''}
+      ${data.temp ? `<span><span class="material-symbols-outlined">thermostat</span> ${data.temp} °C</span>` : ''}
+      ${data.totalWater ? `<span><span class="material-symbols-outlined">water_drop</span> ${data.totalWater} мл</span>` : ''}
     </div>
-    ${pointsStr ? `<div class="coffee-recipe-detail"><span>вливания: ${pointsStr}</span></div>` : ''}
     <div class="coffee-recipe-actions">
-      <button class="coffee-recipe-delete" data-id="${id}">✕</button>
+      <button class="coffee-recipe-delete" data-id="${id}">
+        <span class="material-symbols-outlined">delete</span>
+      </button>
     </div>
   `;
 
@@ -787,7 +627,6 @@ if (coffeeRoastDate) {
   coffeeRoastDate.addEventListener('change', updateCoffeeAge);
   coffeeRoastDate.addEventListener('blur', updateCoffeeAge);
 }
-if (coffeeWater) coffeeWater.addEventListener('input', () => drawChart(coffeeChartCanvas, currentPoints));
 
 window.updateCoffeeAge = updateCoffeeAge;
 

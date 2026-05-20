@@ -5,7 +5,7 @@
   --card-bg-solid: #ffffff;
   --text-main: #1d1d1f;
   --text-muted: #86868b;
-  --accent: #0071e3; /* Дефолтный синий (для экрана входа) */
+  --accent: #0071e3;
   --accent-gradient: linear-gradient(135deg, #0071e3, #4196fd);
   --color-delete: #ff3b30;
   --color-complete: #34c759;
@@ -16,14 +16,14 @@
   --transition-spring: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── Цветовое кодирование разделов через локальные переменные ── */
+/* ── Цветовое кодирование разделов ── */
 
-/* 1. ПОКУПКИ (Свежий Зеленый) */
+/* 1. ПОКУПКИ (Чистый зеленый) */
 #quick-products-container, 
 .input-group, 
 .list-section {
   --accent: #24b263;
-  --accent-gradient: linear-gradient(135deg, #24b263, #00b4d8);
+  --accent-gradient: linear-gradient(135deg, #24b263, #0f7d41);
 }
 
 /* 2. КОФЕ (Теплый Карамельный) */
@@ -32,10 +32,10 @@
   --accent-gradient: linear-gradient(135deg, #c37033, #e59f66);
 }
 
-/* 3. ЗАДАЧИ (Продуктивный Фиолетовый) */
+/* 3. ЗАДАЧИ (Насыщенный Фиолетовый) */
 #tasks-section {
   --accent: #7a5af8;
-  --accent-gradient: linear-gradient(135deg, #7a5af8, #b87ef8);
+  --accent-gradient: linear-gradient(135deg, #7a5af8, #4f29d6);
 }
 
 * {
@@ -205,27 +205,31 @@ h1 {
   letter-spacing: -0.03em;
 }
 
+/* Прямоугольные кнопки QR-кодов в стиле кошелька */
 .qr-icon-btn {
   background: var(--card-bg-solid);
   border: 1px solid var(--border);
-  padding: 6px;
+  padding: 4px 14px;
+  width: 58px;
+  height: 32px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 10px;
   transition: var(--transition-spring);
   box-shadow: var(--shadow-sm);
 }
 
 .qr-icon-btn img {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  height: 18px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 .qr-icon-btn:active {
-  transform: scale(0.9);
+  transform: scale(0.92);
 }
 
 .text-btn {
@@ -543,17 +547,16 @@ li.swiping-left .swipe-content {
   transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Настройки активных цветов для вкладок навигации */
 .nav-item[data-tab="shopping"].active {
-  color: #24b263; /* Зеленый при активных покупках */
+  color: #24b263;
 }
 
 .nav-item[data-tab="coffee"].active {
-  color: #d48243; /* Карамельный при активном кофе */
+  color: #d48243;
 }
 
 .nav-item[data-tab="tasks"].active {
-  color: #7a5af8; /* Фиолетовый при активных задачах */
+  color: #7a5af8;
 }
 
 .nav-item.active .nav-icon {

@@ -14,6 +14,9 @@
   
   <link class="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192.png">
+
+  <!-- Подключение Google Material Symbols -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 </head>
 <body>
   <!-- Экран авторизации -->
@@ -118,21 +121,6 @@
             <input type="number" id="coffee-grind" placeholder="Помол (клики)" class="coffee-input" step="1" min="0">
             <input type="number" id="coffee-temp" placeholder="Температура (°C)" class="coffee-input" step="0.1" min="0">
             <input type="number" id="coffee-water" placeholder="Общая вода (мл)" class="coffee-input" step="1" min="0">
-          </div>
-          
-          <div class="coffee-chart-container">
-            <h4 class="coffee-chart-title">График вливаний</h4>
-            <canvas id="coffee-chart" class="coffee-chart" width="300" height="200"></canvas>
-            <div class="coffee-points" id="coffee-points-list"></div>
-            <div class="coffee-add-point">
-              <input type="text" id="point-time" placeholder="Время (мм:сс)" class="coffee-input small">
-              <input type="number" id="point-water" placeholder="Вода (мл)" class="coffee-input small" step="1" min="0">
-              <button id="add-point-btn" class="coffee-small-btn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 3v10M3 8h10" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-              </button>
-            </div>
           </div>
           
           <button id="coffee-save" class="coffee-save-btn">Сохранить рецепт</button>

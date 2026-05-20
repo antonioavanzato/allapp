@@ -749,26 +749,22 @@ function renderCoffeeRecipe(id, data) {
   card.className = 'coffee-recipe-card';
   const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : null;
   const pointsStr = data.points?.length > 0 ? data.points.map(p => `${formatTime(p.time)} / ${p.water}мл`).join(', ') : '';
-  const canvasId = `chart-${id}`;
 
   card.innerHTML = `
     <div class="coffee-recipe-name">${data.name}</div>
     <div class="coffee-recipe-detail">
-      ${data.processing ? `<span>🌱 ${data.processing}</span>` : ''}
-      ${roastDateStr ? `<span>🔥 Обжарка: ${roastDateStr}</span>` : ''}
-      ${data.dose ? `<span>⚖️ ${data.dose}г</span>` : ''}
+      ${data.processing ? `<span>обработка: ${data.processing}</span>` : ''}
+      ${roastDateStr ? `<span>обжарка: ${roastDateStr}</span>` : ''}
+      ${data.dose ? `<span>дозировка: ${data.dose}г</span>` : ''}
     </div>
     <div class="coffee-recipe-detail">
-      ${data.grind ? `<span>⚙️ Помол: ${data.grind}</span>` : ''}
-      ${data.temp ? `<span>🌡️ ${data.temp}°C</span>` : ''}
-      ${data.totalWater ? `<span>💧 ${data.totalWater}мл</span>` : ''}
+      ${data.grind ? `<span>помол: ${data.grind} кл.</span>` : ''}
+      ${data.temp ? `<span>темп.: ${data.temp}°C</span>` : ''}
+      ${data.totalWater ? `<span>вода: ${data.totalWater}мл</span>` : ''}
     </div>
-    ${pointsStr ? `<div class="coffee-recipe-detail"><span>📊 ${pointsStr}</span></div>` : ''}
-    <div style="margin: 8px 0;">
-      <canvas id="${canvasId}" class="coffee-chart" width="300" height="150"></canvas>
-    </div>
+    ${pointsStr ? `<div class="coffee-recipe-detail"><span>вливания: ${pointsStr}</span></div>` : ''}
     <div class="coffee-recipe-actions">
-      <button class="coffee-recipe-delete" data-id="${id}">🗑️</button>
+      <button class="coffee-recipe-delete" data-id="${id}">✕</button>
     </div>
   `;
 
@@ -785,21 +781,6 @@ function renderCoffeeRecipe(id, data) {
   });
 
   coffeeRecipesList.appendChild(card);
-
-  requestAnimationFrame(() => {
-    const chartCanvas = document.getElementById(canvasId);
-    if (!chartCanvas) return;
-    if (data.points?.length > 0) {
-      drawChartWithPoints(chartCanvas, data.points);
-    } else {
-      const ctx = chartCanvas.getContext('2d');
-      ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
-      ctx.font = '12px -apple-system';
-      ctx.fillStyle = '#8e8e93';
-      ctx.textAlign = 'center';
-      ctx.fillText('Нет данных', chartCanvas.width / 2, chartCanvas.height / 2);
-    }
-  });
 }
 
 if (coffeeRoastDate) {

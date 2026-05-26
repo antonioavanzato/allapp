@@ -601,15 +601,22 @@ li.swiping-left .swipe-content {
   gap: 14px;
 }
 
-details.coffee-form {
+.coffee-form {
   background: var(--card-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 24px;
   border: 1px solid var(--glass-border);
   padding: 20px;
-  box-shadow: var(--shadow-md);
   display: block;
+  box-shadow: var(--shadow-md);
+}
+
+.coffee-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .coffee-summary {
@@ -622,6 +629,20 @@ details.coffee-form {
   font-weight: 700;
   color: var(--text-main);
   letter-spacing: -0.02em;
+}
+
+.coffee-summary::-webkit-details-marker {
+  display: none;
+}
+
+.coffee-summary-arrow {
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: transform 0.3s ease;
+}
+
+details[open] .coffee-summary-arrow {
+  transform: rotate(180deg);
 }
 
 .coffee-summary::-webkit-details-marker {

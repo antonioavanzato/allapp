@@ -444,6 +444,18 @@ if (quickToggle && quickGrid && quickArrow) {
   });
 }
 
+const coffeeFormToggle = document.getElementById('coffee-form-toggle');
+const coffeeFormBody = document.getElementById('coffee-form-body');
+const coffeeFormArrow = document.getElementById('coffee-form-arrow');
+let isCoffeeFormExpanded = false;
+if (coffeeFormToggle) {
+  coffeeFormToggle.addEventListener('click', () => {
+    isCoffeeFormExpanded = !isCoffeeFormExpanded;
+    coffeeFormBody.classList.toggle('collapsed', !isCoffeeFormExpanded);
+    coffeeFormArrow.classList.toggle('collapsed', !isCoffeeFormExpanded);
+  });
+}
+
 // ── Календарь ──
 function loadCalendar() {
   if (unsubscribeCalendar) unsubscribeCalendar();
@@ -548,6 +560,9 @@ function resetCoffeeForm() {
   coffeeGrind.value = '';
   coffeeTemp.value = '';
   coffeeWater.value = '';
+  isCoffeeFormExpanded = false;
+  if (coffeeFormBody) coffeeFormBody.classList.add('collapsed');
+  if (coffeeFormArrow) coffeeFormArrow.classList.add('collapsed');
 }
 
 coffeeSaveBtn.addEventListener('click', async () => {

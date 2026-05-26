@@ -10,6 +10,9 @@ const urlsToCache = [
   './icons/icon-512.png'
 ];
 
+// Файлы которые всегда берём из сети (не из кэша)
+const networkFirstFiles = ['index.html', 'style.css', 'app.js'];
+
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -33,15 +36,33 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => response || fetch(event.request))
-  );
+  const url = event.request.url;
+  const isNetworkFirst = networkFirstFiles.some(file => url.includes(file));
+
+  if (isNetworkFirst) {
+    // Сначала сеть, при ошибке — кэш
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+  } else {
+    // Иконки, шрифты и прочее — из кэша
+    event.respondWith(
+      caches.match(event.request)
+        .then((response) => response || fetch(event.request))
+    );
+  }
 });
 
 self.addEventListener('push', (event) => {
   if (!event.data) return;
-  
   try {
     const data = event.data.json();
     const options = {
@@ -53,12 +74,8 @@ self.addEventListener('push', (event) => {
         { action: 'open', title: 'Открыть' }
       ]
     };
-    
     event.waitUntil(
-      self.registration.showNotification(
-        data.title || 'AllApp',
-        options
-      )
+      self.registration.showNotification(data.title || 'AllApp', options)
     );
   } catch (error) {
     console.error('Ошибка:', error);

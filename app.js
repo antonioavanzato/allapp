@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { 
-  getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, 
-  serverTimestamp, setDoc, where, getDoc 
+import {
+  getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy,
+  serverTimestamp, setDoc, where, getDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
@@ -23,10 +23,8 @@ const messaging = getMessaging(app);
 const functions = getFunctions(app);
 
 const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q';
-
 let currentFCMToken = null;
 
-// ── SW: проверка обновлений ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('firebase-messaging-sw.js');
@@ -43,7 +41,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ── FCM ──
 async function initFCMToken() {
   try {
     if (!('Notification' in window)) return;
@@ -54,7 +51,6 @@ async function initFCMToken() {
     currentFCMToken = token;
     const saveToken = httpsCallable(functions, 'saveUserToken');
     await saveToken({ token });
-    console.log('FCM токен сохранён');
   } catch (error) {
     console.error('Ошибка FCM:', error);
   }
@@ -77,7 +73,6 @@ onMessage(messaging, (payload) => {
   showToast(`${title}: ${body}`);
 });
 
-// ── DOM ──
 const authScreen = document.getElementById('auth-screen');
 const mainApp = document.getElementById('main-app');
 const emailInput = document.getElementById('email-input');
@@ -95,13 +90,7 @@ const emptyState = document.getElementById('empty-state');
 const quickContainer = document.getElementById('quick-products-container');
 const inputGroup = document.getElementById('input-group');
 const listSection = document.getElementById('list-section');
-const calendarContainer = document.getElementById('albus-calendar');
 const coffeeSection = document.getElementById('coffee-section');
-
-const calendarDays = document.getElementById('calendar-days');
-const currentMonthSpan = document.getElementById('current-month');
-const prevMonthBtn = document.getElementById('prev-month');
-const nextMonthBtn = document.getElementById('next-month');
 
 const coffeeName = document.getElementById('coffee-name');
 const coffeeProcessing = document.getElementById('coffee-processing');
@@ -116,10 +105,8 @@ const coffeeRecipesList = document.getElementById('coffee-recipes-list');
 
 let currentTab = 'shopping';
 let unsubscribe = null;
-let unsubscribeCalendar = null;
 let unsubscribeCoffee = null;
 let currentUser = null;
-let currentCalendarDate = new Date();
 
 const userNames = {
   'antonioavanzato@gmail.com': 'Антон',
@@ -135,7 +122,6 @@ function getUserDisplayName(email) {
   return userNames[local] || local;
 }
 
-// ── Toast ──
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast-message');
   if (!toast) return;
@@ -145,7 +131,6 @@ function showToast(message, type = 'success') {
   setTimeout(() => toast.classList.add('hidden'), 2000);
 }
 
-// ── Offline-индикатор ──
 const offlineBar = document.createElement('div');
 offlineBar.className = 'offline-bar';
 offlineBar.textContent = '⚡ Нет соединения — изменения сохранятся при подключении';
@@ -161,10 +146,8 @@ function setOfflineState(isOffline) {
   }
 }
 
-// Проверка через fetch — надёжно на iOS
 async function checkOnline() {
-  const isOnline = navigator.onLine;
-  if (!isOnline) {
+  if (!navigator.onLine) {
     setOfflineState(true);
   } else if (document.body.classList.contains('is-offline')) {
     setOfflineState(false);
@@ -172,17 +155,11 @@ async function checkOnline() {
   }
 }
 
-// Начальная проверка
 checkOnline();
-
-// Polling каждые 5 секунд
 setInterval(checkOnline, 5000);
-
-// Нативные события как дополнение
 window.addEventListener('online', () => checkOnline());
 window.addEventListener('offline', () => setOfflineState(true));
 
-// ── Scroll helper ──
 function scrollToNewItem() {
   setTimeout(() => {
     const lastItem = itemsList.lastElementChild;
@@ -195,7 +172,6 @@ function scrollToNewItem() {
   }, 100);
 }
 
-// ── Auth ──
 loginBtn.addEventListener('click', async () => {
   const email = emailInput?.value;
   const password = passwordInput?.value;
@@ -227,7 +203,6 @@ onAuthStateChanged(auth, (user) => {
   } else {
     currentUser = null;
     if (unsubscribe) unsubscribe();
-    if (unsubscribeCalendar) unsubscribeCalendar();
     if (unsubscribeCoffee) unsubscribeCoffee();
     mainApp.classList.add('hidden');
     authScreen.classList.remove('hidden');
@@ -236,7 +211,6 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// ── Tabs ──
 function switchTab(tab) {
   currentTab = tab;
 
@@ -246,7 +220,7 @@ function switchTab(tab) {
   });
 
   if (pageTitle) {
-    const titles = { shopping: 'Покупки', tasks: 'Задачи', albus: 'Альбус', coffee: 'Кофе' };
+    const titles = { shopping: 'Покупки', tasks: 'Задачи', coffee: 'Кофе' };
     pageTitle.textContent = titles[tab] || '';
   }
 
@@ -257,34 +231,23 @@ function switchTab(tab) {
     if (quickContainer) quickContainer.style.display = tab === 'shopping' ? 'block' : 'none';
     if (inputGroup) inputGroup.style.display = 'flex';
     if (listSection) listSection.style.display = 'block';
-    if (calendarContainer) calendarContainer.classList.add('hidden');
     if (coffeeSection) coffeeSection.classList.add('hidden');
     if (listTitle) listTitle.textContent = tab === 'shopping' ? 'Список покупок' : 'Список задач';
     if (itemInput) itemInput.placeholder = tab === 'shopping' ? 'Что купить?..' : 'Новая задача...';
     loadListData();
-  } else if (tab === 'albus') {
-    if (quickContainer) quickContainer.style.display = 'none';
-    if (inputGroup) inputGroup.style.display = 'none';
-    if (listSection) listSection.style.display = 'none';
-    if (calendarContainer) calendarContainer.classList.remove('hidden');
-    if (coffeeSection) coffeeSection.classList.add('hidden');
-    loadCalendar();
   } else if (tab === 'coffee') {
     if (quickContainer) quickContainer.style.display = 'none';
     if (inputGroup) inputGroup.style.display = 'none';
     if (listSection) listSection.style.display = 'none';
-    if (calendarContainer) calendarContainer.classList.add('hidden');
     if (coffeeSection) coffeeSection.classList.remove('hidden');
     resetCoffeeForm();
     loadCoffeeRecipes();
   }
 }
 
-// ── List ──
 function loadListData() {
   if (unsubscribe) unsubscribe();
   if (!currentUser) return;
-
   const q = query(collection(db, 'family', 'shared', currentTab), orderBy('createdAt', 'desc'));
   unsubscribe = onSnapshot(q, (snapshot) => {
     itemsList.innerHTML = '';
@@ -340,7 +303,6 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   });
 });
 
-// ── Swipe list items ──
 function renderItem(id, item) {
   if (!itemsList) return;
   const li = document.createElement('li');
@@ -360,20 +322,27 @@ function renderItem(id, item) {
   `;
 
   const swipeContent = li.querySelector('.swipe-content');
-  let startX = 0, translateX = 0, isSwiping = false;
+  let startX = 0, startY = 0, translateX = 0, isSwiping = false;
   const threshold = 80;
   const getX = e => e.touches ? e.touches[0].clientX : e.clientX;
+  const getY = e => e.touches ? e.touches[0].clientY : e.clientY;
 
   const start = e => {
     startX = getX(e);
+    startY = getY(e);
     isSwiping = true;
     li.classList.remove('swiping-right', 'swiping-left');
   };
 
-    const move = e => {
+  const move = e => {
     if (!isSwiping) return;
     translateX = getX(e) - startX;
-    if (Math.abs(translateX) > 10) e.preventDefault();
+    const translateY = getY(e) - startY;
+    if (Math.abs(translateX) > Math.abs(translateY) && Math.abs(translateX) > 10) {
+      e.preventDefault();
+    } else if (Math.abs(translateY) > Math.abs(translateX)) {
+      return;
+    }
     if (translateX > 120) translateX = 120;
     if (translateX < -120) translateX = -120;
     if (swipeContent) swipeContent.style.transform = `translateX(${translateX}px)`;
@@ -392,7 +361,6 @@ function renderItem(id, item) {
     li.classList.remove('swiping-right', 'swiping-left');
     document.removeEventListener('mousemove', move);
     document.removeEventListener('mouseup', end);
-
     try {
       if (translateX > threshold) {
         await updateDoc(doc(db, 'family', 'shared', currentTab, id), { completed: !item.completed });
@@ -429,7 +397,6 @@ function renderItem(id, item) {
 
 navItems.forEach(nav => nav.addEventListener('click', () => switchTab(nav.dataset.tab)));
 
-// ── Quick products ──
 const quickToggle = document.getElementById('quick-toggle');
 const quickGrid = document.getElementById('quick-grid');
 const quickArrow = document.getElementById('quick-arrow');
@@ -444,103 +411,6 @@ if (quickToggle && quickGrid && quickArrow) {
   });
 }
 
-const coffeeFormToggle = document.getElementById('coffee-form-toggle');
-const coffeeFormBody = document.getElementById('coffee-form-body');
-const coffeeFormArrow = document.getElementById('coffee-form-arrow');
-let isCoffeeFormExpanded = false;
-if (coffeeFormToggle) {
-  coffeeFormToggle.addEventListener('click', () => {
-    isCoffeeFormExpanded = !isCoffeeFormExpanded;
-    coffeeFormBody.classList.toggle('collapsed', !isCoffeeFormExpanded);
-    coffeeFormArrow.classList.toggle('collapsed', !isCoffeeFormExpanded);
-  });
-}
-
-// ── Календарь ──
-function loadCalendar() {
-  if (unsubscribeCalendar) unsubscribeCalendar();
-  renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
-}
-
-function renderCalendar(year, month) {
-  const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-  currentMonthSpan.textContent = `${monthNames[month]} ${year}`;
-
-  const firstDay = new Date(year, month, 1);
-  const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const pad = n => String(n).padStart(2, '0');
-
-  const daysArray = [];
-  for (let i = 0; i < startOffset; i++) daysArray.push(null);
-  for (let d = 1; d <= daysInMonth; d++) daysArray.push(d);
-
-  const q = query(
-    collection(db, 'family', 'shared', 'albus'),
-    where('date', '>=', `${year}-${pad(month+1)}-01`),
-    where('date', '<=', `${year}-${pad(month+1)}-${pad(daysInMonth)}`)
-  );
-
-  if (unsubscribeCalendar) unsubscribeCalendar();
-  unsubscribeCalendar = onSnapshot(q, (snapshot) => {
-    const takenMap = {};
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      takenMap[data.date] = data.taken;
-    });
-
-    calendarDays.innerHTML = '';
-    daysArray.forEach(day => {
-      const dayDiv = document.createElement('div');
-      dayDiv.className = 'calendar-day';
-      if (day === null) {
-        dayDiv.classList.add('empty');
-      } else {
-        const dateStr = `${year}-${pad(month+1)}-${pad(day)}`;
-        dayDiv.textContent = day;
-        if (takenMap[dateStr] === true) dayDiv.classList.add('taken');
-        dayDiv.dataset.date = dateStr;
-        dayDiv.addEventListener('click', () => handleDayClick(dateStr));
-      }
-      calendarDays.appendChild(dayDiv);
-    });
-  });
-}
-
-async function handleDayClick(dateStr) {
-  if (!currentUser) return;
-  const docRef = doc(db, 'family', 'shared', 'albus', dateStr);
-  try {
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const current = docSnap.data().taken;
-      await updateDoc(docRef, { taken: !current });
-      showToast(!current ? 'Отмечено' : 'Отмена');
-    } else {
-      await setDoc(docRef, {
-        date: dateStr,
-        taken: true,
-        createdBy: currentUser.email,
-        createdAt: serverTimestamp()
-      });
-      showToast('Отмечено');
-    }
-  } catch (error) {
-    console.error('Ошибка:', error);
-    showToast('Ошибка', 'error');
-  }
-}
-
-if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => {
-  currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-  renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
-});
-if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => {
-  currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-  renderCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
-});
-
-// ── Кофе ──
 function updateCoffeeAge() {
   const dateStr = coffeeRoastDate.value;
   if (!dateStr) { coffeeAgeSpan.textContent = '— дней'; return; }
@@ -552,6 +422,8 @@ function updateCoffeeAge() {
 }
 
 function resetCoffeeForm() {
+  const details = document.getElementById('coffee-form-details');
+  if (details) details.removeAttribute('open');
   coffeeName.value = '';
   coffeeProcessing.value = '';
   coffeeRoastDate.value = '';
@@ -560,9 +432,6 @@ function resetCoffeeForm() {
   coffeeGrind.value = '';
   coffeeTemp.value = '';
   coffeeWater.value = '';
-  isCoffeeFormExpanded = false;
-  if (coffeeFormBody) coffeeFormBody.classList.add('collapsed');
-  if (coffeeFormArrow) coffeeFormArrow.classList.add('collapsed');
 }
 
 coffeeSaveBtn.addEventListener('click', async () => {
@@ -577,7 +446,6 @@ coffeeSaveBtn.addEventListener('click', async () => {
     grind: coffeeGrind.value ? parseInt(coffeeGrind.value) : null,
     temp: coffeeTemp.value ? parseFloat(coffeeTemp.value) : null,
     totalWater: coffeeWater.value ? parseInt(coffeeWater.value) : null,
-    points: [],
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
   };
@@ -646,7 +514,6 @@ if (coffeeRoastDate) {
 
 window.updateCoffeeAge = updateCoffeeAge;
 
-// ── QR-коды ──
 function showQRModal(imageSrc, storeName) {
   if (document.querySelector('.qr-modal')) return;
   const modal = document.createElement('div');

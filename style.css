@@ -639,6 +639,30 @@ li.swiping-left .swipe-content {
   margin-top: 4px;
 }
 
+.coffee-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.coffee-form-body {
+  overflow: hidden;
+  transition: var(--transition-spring);
+  max-height: 800px;
+  opacity: 1;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coffee-form-body.collapsed {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  margin-top: 0 !important;
+}
+
 .coffee-title {
   font-size: 18px;
   font-weight: 700;

@@ -214,10 +214,11 @@ onAuthStateChanged(auth, (user) => {
 function switchTab(tab) {
   currentTab = tab;
 
-  navItems.forEach(nav => {
+    navItems.forEach(nav => {
     nav.classList.remove('active');
     if (nav.dataset.tab === tab) nav.classList.add('active');
   });
+  document.querySelector('.content').dataset.tab = tab;
 
   if (pageTitle) {
     const titles = { shopping: 'Покупки', tasks: 'Задачи', coffee: 'Кофе' };

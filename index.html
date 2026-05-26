@@ -101,36 +101,38 @@
         <p id="empty-state" class="empty-state hidden">Здесь пока пусто</p>
       </div>
 
-      <!-- Кофе -->
+           <!-- Кофе -->
       <div id="coffee-section" class="coffee-container hidden">
         <div class="coffee-form">
-          <h3 class="coffee-title">Новый рецепт</h3>
-          
-          <input type="text" id="coffee-name" placeholder="Название" class="coffee-input">
-          <input type="text" id="coffee-processing" placeholder="Обработка" class="coffee-input">
-          
-          <div class="coffee-row">
-            <input type="text" id="coffee-roast-date" class="coffee-input coffee-date" placeholder="Дата обжарки" 
-                   onfocus="this.type='date'" 
-                   onblur="if(!this.value) this.type='text'; window.updateCoffeeAge?.()">
-            <span class="coffee-age" id="coffee-age">— дней</span>
+          <div class="coffee-form-header" id="coffee-form-toggle">
+            <h3 class="coffee-title">Новый рецепт</h3>
+            <span class="quick-arrow collapsed" id="coffee-form-arrow">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
           </div>
-          
-          <div class="coffee-group">
-            <input type="number" id="coffee-dose" placeholder="Дозировка (г)" class="coffee-input" step="0.1" min="0">
-            <input type="number" id="coffee-grind" placeholder="Помол (клики)" class="coffee-input" step="1" min="0">
-            <input type="number" id="coffee-temp" placeholder="Температура (°C)" class="coffee-input" step="0.1" min="0">
-            <input type="number" id="coffee-water" placeholder="Общая вода (мл)" class="coffee-input" step="1" min="0">
+          <div class="coffee-form-body collapsed" id="coffee-form-body">
+            <input type="text" id="coffee-name" placeholder="Название" class="coffee-input">
+            <input type="text" id="coffee-processing" placeholder="Обработка" class="coffee-input">
+            
+            <div class="coffee-row">
+              <input type="text" id="coffee-roast-date" class="coffee-input coffee-date" placeholder="Дата обжарки" 
+                     onfocus="this.type='date'" 
+                     onblur="if(!this.value) this.type='text'; window.updateCoffeeAge?.()">
+              <span class="coffee-age" id="coffee-age">— дней</span>
+            </div>
+            
+            <div class="coffee-group">
+              <input type="number" id="coffee-dose" placeholder="Дозировка (г)" class="coffee-input" step="0.1" min="0">
+              <input type="number" id="coffee-grind" placeholder="Помол (клики)" class="coffee-input" step="1" min="0">
+              <input type="number" id="coffee-temp" placeholder="Температура (°C)" class="coffee-input" step="0.1" min="0">
+              <input type="number" id="coffee-water" placeholder="Общая вода (мл)" class="coffee-input" step="1" min="0">
+            </div>
+            
+            <button id="coffee-save" class="coffee-save-btn">Сохранить рецепт</button>
           </div>
-          
-          <button id="coffee-save" class="coffee-save-btn">Сохранить рецепт</button>
         </div>
-        
-        <div class="coffee-list">
-          <h3 class="coffee-title">Сохранённые рецепты</h3>
-          <div id="coffee-recipes-list"></div>
-        </div>
-      </div>
     </main>
 
     <!-- Нижняя навигация -->

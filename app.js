@@ -473,24 +473,31 @@ function renderCoffeeRecipe(id, data) {
   const card = document.createElement('div');
   card.className = 'coffee-recipe-card';
   const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : null;
+  const meta = [data.processing, roastDateStr].filter(Boolean).join(' · ');
+
+  const params = [
+    data.dose      ? { label: 'Доза',    value: `${data.dose} г`      } : null,
+    data.grind     ? { label: 'Помол',   value: `${data.grind} кл`    } : null,
+    data.temp      ? { label: 'Темп.',   value: `${data.temp} °C`     } : null,
+    data.totalWater? { label: 'Вода',    value: `${data.totalWater} мл`} : null,
+  ].filter(Boolean);
 
   card.innerHTML = `
-    <div class="coffee-recipe-name">${data.name}</div>
-    <div class="coffee-recipe-detail">
-      ${data.processing ? `<span><span class="material-symbols-outlined">eco</span> ${data.processing}</span>` : ''}
-      ${roastDateStr ? `<span><span class="material-symbols-outlined">calendar_today</span> ${roastDateStr}</span>` : ''}
-      ${data.dose ? `<span><span class="material-symbols-outlined">scale</span> ${data.dose} г</span>` : ''}
+    <div class="coffee-recipe-header">
+      <div class="coffee-recipe-name">${data.name}</div>
+      <button class="coffee-recipe-delete" data-id="${id}">✕</button>
     </div>
-    <div class="coffee-recipe-detail">
-      ${data.grind ? `<span><span class="material-symbols-outlined">tune</span> Помол: ${data.grind}</span>` : ''}
-      ${data.temp ? `<span><span class="material-symbols-outlined">thermostat</span> ${data.temp} °C</span>` : ''}
-      ${data.totalWater ? `<span><span class="material-symbols-outlined">water_drop</span> ${data.totalWater} мл</span>` : ''}
-    </div>
-    <div class="coffee-recipe-actions">
-      <button class="coffee-recipe-delete" data-id="${id}">
-        <span class="material-symbols-outlined">delete</span>
-      </button>
-    </div>
+    ${meta ? `<div class="coffee-recipe-meta">${meta}</div>` : ''}
+    ${params.length ? `
+      <div class="coffee-recipe-params">
+        ${params.map(p => `
+          <div class="coffee-param">
+            <span class="param-label">${p.label}</span>
+            <span class="param-value">${p.value}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
   `;
 
   card.querySelector('.coffee-recipe-delete').addEventListener('click', async (e) => {

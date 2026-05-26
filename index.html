@@ -87,7 +87,7 @@
         <p id="empty-state" class="empty-state hidden">Здесь пока пусто</p>
       </div>
 
-      <div id="coffee-section" class="coffee-container hidden">
+            <div id="coffee-section" class="coffee-container hidden">
         <details class="coffee-form" id="coffee-form-details">
           <summary class="coffee-summary">
             <span>Новый рецепт</span>
@@ -96,18 +96,21 @@
           <div class="coffee-form-fields">
             <input type="text" id="coffee-name" placeholder="Название" class="coffee-input">
             <input type="text" id="coffee-processing" placeholder="Обработка" class="coffee-input">
+            
             <div class="coffee-row">
               <input type="text" id="coffee-roast-date" class="coffee-input coffee-date" placeholder="Дата обжарки"
                      onfocus="this.type='date'"
                      onblur="if(!this.value) this.type='text'; window.updateCoffeeAge?.()">
               <span class="coffee-age" id="coffee-age">— дней</span>
             </div>
+            
             <div class="coffee-group">
               <input type="number" id="coffee-dose" placeholder="Дозировка (г)" class="coffee-input" step="0.1" min="0">
               <input type="number" id="coffee-grind" placeholder="Помол (клики)" class="coffee-input" step="1" min="0">
               <input type="number" id="coffee-temp" placeholder="Температура (°C)" class="coffee-input" step="0.1" min="0">
               <input type="number" id="coffee-water" placeholder="Общая вода (мл)" class="coffee-input" step="1" min="0">
             </div>
+            
             <button id="coffee-save" class="coffee-save-btn">Сохранить рецепт</button>
           </div>
         </details>

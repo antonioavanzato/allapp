@@ -370,9 +370,10 @@ function renderItem(id, item) {
     li.classList.remove('swiping-right', 'swiping-left');
   };
 
-  const move = e => {
+    const move = e => {
     if (!isSwiping) return;
     translateX = getX(e) - startX;
+    if (Math.abs(translateX) > 10) e.preventDefault();
     if (translateX > 120) translateX = 120;
     if (translateX < -120) translateX = -120;
     if (swipeContent) swipeContent.style.transform = `translateX(${translateX}px)`;

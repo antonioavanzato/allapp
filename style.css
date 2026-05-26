@@ -16,9 +16,15 @@
   --transition-spring: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-#quick-products-container,
-.input-group,
-.list-section {
+.content[data-tab="shopping"] #quick-products-container,
+.content[data-tab="shopping"] .input-group,
+.content[data-tab="shopping"] .list-section {
+  --accent: #ff3b30;
+  --accent-gradient: linear-gradient(135deg, #ff3b30, #ff6961);
+}
+
+.content[data-tab="tasks"] .input-group,
+.content[data-tab="tasks"] .list-section {
   --accent: #24b263;
   --accent-gradient: linear-gradient(135deg, #24b263, #0f7d41);
 }

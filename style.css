@@ -958,3 +958,30 @@ details[open] .coffee-summary-arrow {
     max-width: calc(100% - 32px);
   }
 }
+.notif-btn {
+  background: none;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: var(--transition-spring);
+  flex-shrink: 0;
+}
+
+.notif-btn.notif-active {
+  color: var(--accent);
+}
+
+.notif-btn.notif-denied {
+  color: var(--color-delete);
+  opacity: 0.5;
+}
+
+.notif-btn:active {
+  transform: scale(0.9);
+}

@@ -51,8 +51,25 @@ async function initFCMToken() {
     currentFCMToken = token;
     const saveToken = httpsCallable(functions, 'saveUserToken');
     await saveToken({ token });
+    updateNotifBtn();
   } catch (error) {
     console.error('Ошибка FCM:', error);
+  }
+}
+
+function updateNotifBtn() {
+  const btn = document.getElementById('notif-btn');
+  if (!btn) return;
+  btn.classList.remove('notif-active', 'notif-denied');
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted' && currentFCMToken) {
+    btn.classList.add('notif-active');
+    btn.title = 'Уведомления включены';
+  } else if (Notification.permission === 'denied') {
+    btn.classList.add('notif-denied');
+    btn.title = 'Уведомления отключены в настройках';
+  } else {
+    btn.title = 'Включить уведомления';
   }
 }
 
@@ -214,7 +231,7 @@ onAuthStateChanged(auth, (user) => {
 function switchTab(tab) {
   currentTab = tab;
 
-    navItems.forEach(nav => {
+  navItems.forEach(nav => {
     nav.classList.remove('active');
     if (nav.dataset.tab === tab) nav.classList.add('active');
   });
@@ -476,10 +493,10 @@ function renderCoffeeRecipe(id, data) {
   const meta = [data.processing, roastDateStr].filter(Boolean).join(' · ');
 
   const params = [
-    data.dose      ? { label: 'Доза',    value: `${data.dose} г`      } : null,
-    data.grind     ? { label: 'Помол',   value: `${data.grind} кл`    } : null,
-    data.temp      ? { label: 'Темп.',   value: `${data.temp} °C`     } : null,
-    data.totalWater? { label: 'Вода',    value: `${data.totalWater} мл`} : null,
+    data.dose       ? { label: 'Доза',  value: `${data.dose} г`       } : null,
+    data.grind      ? { label: 'Помол', value: `${data.grind} кл`     } : null,
+    data.temp       ? { label: 'Темп.', value: `${data.temp} °C`      } : null,
+    data.totalWater ? { label: 'Вода',  value: `${data.totalWater} мл`} : null,
   ].filter(Boolean);
 
   card.innerHTML = `
@@ -546,3 +563,23 @@ const qrMagnitBtn = document.getElementById('qr-magnit-btn');
 const qrPyaterochkaBtn = document.getElementById('qr-pyaterochka-btn');
 if (qrMagnitBtn) qrMagnitBtn.addEventListener('click', () => showQRModal('icons/qr-magnit.png', 'Магнит'));
 if (qrPyaterochkaBtn) qrPyaterochkaBtn.addEventListener('click', () => showQRModal('icons/qr-pyaterochka.png', 'Пятёрочка'));
+
+const notifBtn = document.getElementById('notif-btn');
+if (notifBtn) {
+  notifBtn.addEventListener('click', async () => {
+    if (!('Notification' in window)) {
+      showToast('Уведомления не поддерживаются', 'error');
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      showToast('Разрешите уведомления в настройках телефона', 'warning');
+      return;
+    }
+    if (Notification.permission === 'granted' && currentFCMToken) {
+      showToast('Уведомления уже включены ✓', 'success');
+      return;
+    }
+    await initFCMToken();
+  });
+  updateNotifBtn();
+}

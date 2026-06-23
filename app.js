@@ -139,6 +139,16 @@ function getUserDisplayName(email) {
   return userNames[local] || local;
 }
 
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast-message');
   if (!toast) return;
@@ -333,8 +343,8 @@ function renderItem(id, item) {
     </div>
     <div class="swipe-content">
       <span class="item-text ${item.completed ? 'completed' : ''}">
-        ${item.text}
-        ${displayName ? `<span class="user-name">${displayName}</span>` : ''}
+        ${escapeHtml(item.text)}
+        ${displayName ? `<span class="user-name">${escapeHtml(displayName)}</span>` : ''}
       </span>
     </div>
   `;
@@ -452,7 +462,7 @@ function resetCoffeeForm() {
   coffeeWater.value = '';
 }
 
-coffeeSaveBtn.addEventListener('click', async () => {
+if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
   if (!currentUser) return;
   const name = coffeeName.value.trim();
   if (!name) { showToast('Введите название', 'error'); return; }
@@ -490,7 +500,7 @@ function renderCoffeeRecipe(id, data) {
   const card = document.createElement('div');
   card.className = 'coffee-recipe-card';
   const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : null;
-  const meta = [data.processing, roastDateStr].filter(Boolean).join(' · ');
+  const meta = [data.processing, roastDateStr].filter(Boolean).map(escapeHtml).join(' · ');
 
   const params = [
     data.dose       ? { label: 'Доза',  value: `${data.dose} г`       } : null,
@@ -501,7 +511,7 @@ function renderCoffeeRecipe(id, data) {
 
   card.innerHTML = `
     <div class="coffee-recipe-header">
-      <div class="coffee-recipe-name">${data.name}</div>
+      <div class="coffee-recipe-name">${escapeHtml(data.name)}</div>
       <button class="coffee-recipe-delete" data-id="${id}">✕</button>
     </div>
     ${meta ? `<div class="coffee-recipe-meta">${meta}</div>` : ''}

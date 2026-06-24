@@ -1,13 +1,14 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy,
+  getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy,
   serverTimestamp, setDoc, where, getDoc, writeBatch, getDocs
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v20';
+const APP_VERSION = 'v21';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -23,7 +24,17 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Локальный кэш (IndexedDB): списки показываются мгновенно из памяти,
+// свежие данные подтягиваются в фоне. Синхронизация — без изменений.
+let db;
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  });
+} catch (e) {
+  console.error('Не удалось включить локальный кэш, работаем без него:', e);
+  db = getFirestore(app);
+}
 const auth = getAuth(app);
 const messaging = getMessaging(app);
 const functions = getFunctions(app);

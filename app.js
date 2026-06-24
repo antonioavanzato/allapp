@@ -94,18 +94,24 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initFCMToken() {
   try {
     if (!('Notification' in window)) return;
+    
+    // 1. Запрашиваем разрешение
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
 
-    // Ждем готовности воркера, если он еще не успел записаться в переменную
-    if (!swRegistration) {
-      swRegistration = await navigator.serviceWorker.ready;
+    // 2. Ждем, когда Service Worker гарантированно станет ACTIVE в системе.
+    // Браузер вернет готовую регистрацию только тогда, когда статус воркера станет active.
+    const activeRegistration = await navigator.serviceWorker.ready;
+
+    if (!activeRegistration) {
+      console.error('Service Worker не найден или не готов');
+      return;
     }
 
-    // Запрашиваем токен с явным указанием нашего Service Worker (критично для GitHub Pages)
+    // 3. Запрашиваем токен, передавая строго активный воркер
     const token = await getToken(messaging, { 
       vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: swRegistration
+      serviceWorkerRegistration: activeRegistration // Используем гарантированно активный воркер
     });
 
     if (!token) return;

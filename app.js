@@ -28,7 +28,7 @@ const auth = getAuth(app);
 const messaging = getMessaging(app);
 const functions = getFunctions(app);
 
-const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q';
+const VAPID_KEY = 'BEZcSno0f4ds-XO22p3cpn0aI_xOwkSkYH9PNoPVqy7WciJl4KpQbruWPw_7AsHyosDmkFp7EcyCQZLfFlj4UQ4';
 let currentFCMToken = null;
 let swRegistration = null; // Сохраняем объект регистрации глобально для использования в getToken
 

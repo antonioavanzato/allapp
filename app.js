@@ -118,8 +118,29 @@ const coffeeDose = document.getElementById('coffee-dose');
 const coffeeGrind = document.getElementById('coffee-grind');
 const coffeeTemp = document.getElementById('coffee-temp');
 const coffeeWater = document.getElementById('coffee-water');
+const coffeeNotes = document.getElementById('coffee-notes');
+const coffeeRatingEl = document.getElementById('coffee-rating');
 const coffeeSaveBtn = document.getElementById('coffee-save');
 const coffeeRecipesList = document.getElementById('coffee-recipes-list');
+
+let coffeeRating = 0;
+function setCoffeeRating(value) {
+  coffeeRating = value;
+  if (!coffeeRatingEl) return;
+  coffeeRatingEl.querySelectorAll('.star').forEach(star => {
+    const v = parseInt(star.dataset.value);
+    star.textContent = v <= value ? '★' : '☆';
+    star.classList.toggle('filled', v <= value);
+  });
+}
+if (coffeeRatingEl) {
+  coffeeRatingEl.querySelectorAll('.star').forEach(star => {
+    star.addEventListener('click', () => {
+      const v = parseInt(star.dataset.value);
+      setCoffeeRating(v === coffeeRating ? 0 : v);
+    });
+  });
+}
 
 let currentTab = 'shopping';
 let completedDocIds = [];
@@ -366,6 +387,15 @@ function renderItem(id, item) {
   if (!itemsList) return;
   const li = document.createElement('li');
   const displayName = item.createdByName || getUserDisplayName(item.createdBy);
+  const isShopping = currentTab === 'shopping';
+  const qty = item.qty && item.qty > 0 ? item.qty : 1;
+
+  const qtyHtml = isShopping ? `
+      <div class="item-qty">
+        <button class="qty-btn qty-minus" aria-label="Меньше">−</button>
+        <span class="qty-value">${qty}</span>
+        <button class="qty-btn qty-plus" aria-label="Больше">+</button>
+      </div>` : '';
 
   li.innerHTML = `
     <div class="swipe-actions">
@@ -377,9 +407,29 @@ function renderItem(id, item) {
         ${escapeHtml(item.text)}
         ${displayName ? `<span class="user-name">${escapeHtml(displayName)}</span>` : ''}
       </span>
+      ${qtyHtml}
       <button class="item-edit" title="Редактировать" aria-label="Редактировать">✎</button>
     </div>
   `;
+
+  const qtyEl = li.querySelector('.item-qty');
+  if (qtyEl) {
+    const stopQty = e => e.stopPropagation();
+    ['mousedown', 'touchstart', 'click'].forEach(ev =>
+      qtyEl.addEventListener(ev, stopQty, ev === 'touchstart' ? { passive: true } : false));
+    const setQty = async (newQty) => {
+      newQty = Math.max(1, newQty);
+      if (newQty === qty) return;
+      try {
+        await updateDoc(doc(db, 'family', 'shared', currentTab, id), { qty: newQty });
+      } catch (error) {
+        console.error('Ошибка количества:', error);
+        showToast('Ошибка', 'error');
+      }
+    };
+    qtyEl.querySelector('.qty-plus').addEventListener('click', () => setQty(qty + 1));
+    qtyEl.querySelector('.qty-minus').addEventListener('click', () => setQty(qty - 1));
+  }
 
   const editBtn = li.querySelector('.item-edit');
   const stop = e => e.stopPropagation();
@@ -534,6 +584,8 @@ function resetCoffeeForm() {
   coffeeGrind.value = '';
   coffeeTemp.value = '';
   coffeeWater.value = '';
+  if (coffeeNotes) coffeeNotes.value = '';
+  setCoffeeRating(0);
 }
 
 if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
@@ -548,6 +600,8 @@ if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
     grind: coffeeGrind.value ? parseInt(coffeeGrind.value) : null,
     temp: coffeeTemp.value ? parseFloat(coffeeTemp.value) : null,
     totalWater: coffeeWater.value ? parseInt(coffeeWater.value) : null,
+    notes: coffeeNotes && coffeeNotes.value.trim() ? coffeeNotes.value.trim() : null,
+    rating: coffeeRating || null,
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
   };
@@ -591,11 +645,14 @@ function renderCoffeeRecipe(id, data) {
     data.totalWater ? { label: 'Вода',  value: `${data.totalWater} мл`} : null,
   ].filter(Boolean);
 
+  const ratingStr = data.rating ? '★'.repeat(data.rating) + '☆'.repeat(5 - data.rating) : '';
+
   card.innerHTML = `
     <div class="coffee-recipe-header">
       <div class="coffee-recipe-name">${escapeHtml(data.name)}</div>
       <button class="coffee-recipe-delete" data-id="${id}">✕</button>
     </div>
+    ${ratingStr ? `<div class="coffee-recipe-rating">${ratingStr}</div>` : ''}
     ${meta ? `<div class="coffee-recipe-meta">${meta}</div>` : ''}
     ${params.length ? `
       <div class="coffee-recipe-params">
@@ -607,6 +664,7 @@ function renderCoffeeRecipe(id, data) {
         `).join('')}
       </div>
     ` : ''}
+    ${data.notes ? `<div class="coffee-recipe-notes">${escapeHtml(data.notes)}</div>` : ''}
   `;
 
   card.querySelector('.coffee-recipe-delete').addEventListener('click', async (e) => {

@@ -504,6 +504,40 @@ li.swiping-left .swipe-content {
   border-radius: 8px;
 }
 
+.item-qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.qty-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg-solid);
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.qty-btn:active {
+  background: rgba(0, 122, 255, 0.1);
+}
+
+.qty-value {
+  min-width: 18px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
 .item-edit {
   flex-shrink: 0;
   background: none;
@@ -842,6 +876,56 @@ details[open] .coffee-summary-arrow {
   color: var(--text-muted);
   margin-bottom: 12px;
   font-weight: 500;
+}
+
+.coffee-recipe-rating {
+  color: #ff9500;
+  font-size: 15px;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.coffee-recipe-notes {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(142, 142, 147, 0.08);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.coffee-notes-input {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.coffee-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.coffee-rating-label {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.coffee-rating {
+  display: flex;
+  gap: 2px;
+}
+
+.coffee-rating .star {
+  background: none;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  color: #ff9500;
+  cursor: pointer;
+  padding: 2px;
 }
 
 .coffee-recipe-params {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'allapp-cache-v4';
+const CACHE_NAME = 'allapp-cache-v7';
 const urlsToCache = [
   './',
   './index.html',
@@ -14,11 +14,18 @@ const urlsToCache = [
 const networkFirstFiles = ['index.html', 'style.css', 'app.js'];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+  // Не активируемся сразу — ждём команды от страницы (кнопка «Обновить»)
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
   );
+});
+
+// Активируем новую версию по команде из приложения
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {

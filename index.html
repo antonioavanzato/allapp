@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="theme-color" content="#f2f2f7">
+  <meta name="theme-color" content="#f4f1ea">
   <meta name="apple-mobile-web-app-title" content="НАШ ДОМ">
   <title>НАШ ДОМ - Покупки, задачи, Кофе</title>
   <link rel="manifest" href="manifest.json">
@@ -28,7 +28,10 @@
 
   <div id="main-app" class="screen hidden">
         <header class="header">
-      <h1 id="page-title">Покупки</h1>
+      <div class="title-wrap">
+        <h1 id="page-title">Покупки</h1>
+        <span id="sync-dot" class="sync-dot" title="Синхронизация"></span>
+      </div>
       <div style="display: flex; gap: 6px; align-items: center;">
         <div id="header-shop-buttons" style="display: flex; gap: 6px; align-items: center;">
         <button id="qr-magnit-btn" class="qr-icon-btn" title="QR-код Магнит">
@@ -123,7 +126,20 @@
               <input type="number" id="coffee-temp" placeholder="Температура (°C)" class="coffee-input" step="0.1" min="0">
               <input type="number" id="coffee-water" placeholder="Общая вода (мл)" class="coffee-input" step="1" min="0">
             </div>
-            
+
+            <textarea id="coffee-notes" placeholder="Заметки (вкус, что изменить...)" class="coffee-input coffee-notes-input" rows="2"></textarea>
+
+            <div class="coffee-rating-row">
+              <span class="coffee-rating-label">Оценка</span>
+              <div class="coffee-rating" id="coffee-rating">
+                <button type="button" class="star" data-value="1">☆</button>
+                <button type="button" class="star" data-value="2">☆</button>
+                <button type="button" class="star" data-value="3">☆</button>
+                <button type="button" class="star" data-value="4">☆</button>
+                <button type="button" class="star" data-value="5">☆</button>
+              </div>
+            </div>
+
             <button id="coffee-save" class="coffee-save-btn">Сохранить рецепт</button>
           </div>
         </details>
@@ -133,6 +149,8 @@
           <div id="coffee-recipes-list"></div>
         </div>
       </div>
+
+      <div id="app-version" class="app-version"></div>
     </main>
 
     <nav class="bottom-nav">
@@ -160,6 +178,11 @@
         <span>Задачи</span>
       </button>
     </nav>
+  </div>
+
+  <div id="update-banner" class="update-banner">
+    <span class="update-banner-text">🔄 Доступно обновление</span>
+    <button id="update-banner-btn" class="update-banner-btn">Обновить</button>
   </div>
 
   <div id="toast-message" class="toast hidden">✅ Добавлено</div>

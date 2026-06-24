@@ -7,6 +7,12 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
+const APP_VERSION = 'v7';
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('app-version');
+  if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
+});
+
 const firebaseConfig = {
   apiKey: "AIzaSyAICtDB0Rie_2W2DAoX0MOJm7kDSbTAEUA",
   authDomain: "allapp-16e47.firebaseapp.com",
@@ -25,21 +31,60 @@ const functions = getFunctions(app);
 const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q';
 let currentFCMToken = null;
 
+let waitingWorker = null;
+let isReloading = false;
+let updateInitiated = false;
+
+function showUpdateBanner(worker) {
+  waitingWorker = worker;
+  const banner = document.getElementById('update-banner');
+  if (!banner) return;
+  banner.classList.add('visible');
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('firebase-messaging-sw.js');
     navigator.serviceWorker.register('sw.js').then((registration) => {
+      // Уже ждёт новый воркер
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        showUpdateBanner(registration.waiting);
+      }
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
+        if (!newWorker) return;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showToast('Доступно обновление — перезагрузите страницу', 'warning');
+            showUpdateBanner(newWorker);
           }
         });
       });
     });
+
+    // Когда новый воркер взял управление по нашей команде — перезагружаем один раз
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (isReloading || !updateInitiated) return;
+      isReloading = true;
+      window.location.reload();
+    });
   });
 }
+
+function applyUpdate() {
+  const banner = document.getElementById('update-banner');
+  if (banner) banner.classList.remove('visible');
+  updateInitiated = true;
+  if (waitingWorker) {
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  } else {
+    window.location.reload();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const updateBtn = document.getElementById('update-banner-btn');
+  if (updateBtn) updateBtn.addEventListener('click', applyUpdate);
+});
 
 async function initFCMToken() {
   try {
@@ -118,8 +163,29 @@ const coffeeDose = document.getElementById('coffee-dose');
 const coffeeGrind = document.getElementById('coffee-grind');
 const coffeeTemp = document.getElementById('coffee-temp');
 const coffeeWater = document.getElementById('coffee-water');
+const coffeeNotes = document.getElementById('coffee-notes');
+const coffeeRatingEl = document.getElementById('coffee-rating');
 const coffeeSaveBtn = document.getElementById('coffee-save');
 const coffeeRecipesList = document.getElementById('coffee-recipes-list');
+
+let coffeeRating = 0;
+function setCoffeeRating(value) {
+  coffeeRating = value;
+  if (!coffeeRatingEl) return;
+  coffeeRatingEl.querySelectorAll('.star').forEach(star => {
+    const v = parseInt(star.dataset.value);
+    star.textContent = v <= value ? '★' : '☆';
+    star.classList.toggle('filled', v <= value);
+  });
+}
+if (coffeeRatingEl) {
+  coffeeRatingEl.querySelectorAll('.star').forEach(star => {
+    star.addEventListener('click', () => {
+      const v = parseInt(star.dataset.value);
+      setCoffeeRating(v === coffeeRating ? 0 : v);
+    });
+  });
+}
 
 let currentTab = 'shopping';
 let completedDocIds = [];
@@ -151,6 +217,13 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// Лёгкая вибро-отдача (где поддерживается; на iOS — best effort)
+function haptic(pattern = 12) {
+  try {
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  } catch (_) {}
+}
+
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast-message');
   if (!toast) return;
@@ -165,7 +238,29 @@ offlineBar.className = 'offline-bar';
 offlineBar.textContent = '⚡ Нет соединения — изменения сохранятся при подключении';
 document.body.prepend(offlineBar);
 
+const syncDot = document.getElementById('sync-dot');
+let syncIdleTimer = null;
+function setSyncState(state) {
+  if (!syncDot) return;
+  if (!navigator.onLine) state = 'offline';
+  syncDot.classList.remove('synced', 'syncing', 'offline');
+  syncDot.classList.add(state);
+  if (state === 'syncing') {
+    syncDot.title = 'Синхронизация…';
+    // По завершении активности возвращаемся к «подключено»
+    clearTimeout(syncIdleTimer);
+    syncIdleTimer = setTimeout(() => {
+      if (navigator.onLine) setSyncState('synced');
+    }, 1200);
+  } else if (state === 'offline') {
+    syncDot.title = 'Нет соединения';
+  } else {
+    syncDot.title = 'Синхронизировано';
+  }
+}
+
 function setOfflineState(isOffline) {
+  setSyncState(isOffline ? 'offline' : 'synced');
   if (isOffline) {
     document.body.classList.add('is-offline');
     offlineBar.classList.add('visible');
@@ -279,7 +374,13 @@ function loadListData() {
   if (unsubscribe) unsubscribe();
   if (!currentUser) return;
   const q = query(collection(db, 'family', 'shared', currentTab), orderBy('createdAt', 'desc'));
-  unsubscribe = onSnapshot(q, (snapshot) => {
+  unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+    // Точка-индикатор: пульсирует при незавершённой записи, зелёная при синхроне
+    if (snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache) {
+      setSyncState('syncing');
+    } else {
+      setSyncState('synced');
+    }
     itemsList.innerHTML = '';
     completedDocIds = [];
     if (snapshot.empty) {
@@ -310,6 +411,7 @@ async function clearCompleted() {
     const batch = writeBatch(db);
     ids.forEach(id => batch.delete(doc(db, 'family', 'shared', currentTab, id)));
     await batch.commit();
+    haptic([10, 30, 10]);
     showToast(`Удалено: ${ids.length}`);
   } catch (error) {
     console.error('Ошибка очистки:', error);
@@ -331,6 +433,7 @@ async function addItem() {
       createdBy: currentUser.email,
       createdByName: getUserDisplayName(currentUser.email)
     });
+    haptic();
     showToast(`Добавлено: ${text}`);
     scrollToNewItem();
   } catch (error) {
@@ -354,6 +457,7 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
         createdBy: currentUser.email,
         createdByName: getUserDisplayName(currentUser.email)
       });
+      haptic();
       showToast(`Добавлено: ${product}`);
       scrollToNewItem();
     } catch (error) {
@@ -366,6 +470,15 @@ function renderItem(id, item) {
   if (!itemsList) return;
   const li = document.createElement('li');
   const displayName = item.createdByName || getUserDisplayName(item.createdBy);
+  const isShopping = currentTab === 'shopping';
+  const qty = item.qty && item.qty > 0 ? item.qty : 1;
+
+  const qtyHtml = isShopping ? `
+      <div class="item-qty">
+        <button class="qty-btn qty-minus" aria-label="Меньше">−</button>
+        <span class="qty-value">${qty}</span>
+        <button class="qty-btn qty-plus" aria-label="Больше">+</button>
+      </div>` : '';
 
   li.innerHTML = `
     <div class="swipe-actions">
@@ -377,8 +490,73 @@ function renderItem(id, item) {
         ${escapeHtml(item.text)}
         ${displayName ? `<span class="user-name">${escapeHtml(displayName)}</span>` : ''}
       </span>
+      ${qtyHtml}
+      <button class="item-edit" title="Редактировать" aria-label="Редактировать">✎</button>
     </div>
   `;
+
+  const qtyEl = li.querySelector('.item-qty');
+  if (qtyEl) {
+    const stopQty = e => e.stopPropagation();
+    ['mousedown', 'touchstart', 'click'].forEach(ev =>
+      qtyEl.addEventListener(ev, stopQty, ev === 'touchstart' ? { passive: true } : false));
+    const setQty = async (newQty) => {
+      newQty = Math.max(1, newQty);
+      if (newQty === qty) return;
+      haptic(8);
+      try {
+        await updateDoc(doc(db, 'family', 'shared', currentTab, id), { qty: newQty });
+      } catch (error) {
+        console.error('Ошибка количества:', error);
+        showToast('Ошибка', 'error');
+      }
+    };
+    qtyEl.querySelector('.qty-plus').addEventListener('click', () => setQty(qty + 1));
+    qtyEl.querySelector('.qty-minus').addEventListener('click', () => setQty(qty - 1));
+  }
+
+  const editBtn = li.querySelector('.item-edit');
+  const stop = e => e.stopPropagation();
+  // Не даём кнопке запускать свайп
+  ['mousedown', 'touchstart', 'click'].forEach(ev => editBtn.addEventListener(ev, stop, ev === 'touchstart' ? { passive: true } : false));
+
+  editBtn.addEventListener('click', () => {
+    const content = li.querySelector('.swipe-content');
+    if (!content || content.querySelector('.item-edit-input')) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'item-edit-input';
+    input.value = item.text;
+    content.innerHTML = '';
+    content.appendChild(input);
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    ['mousedown', 'touchstart'].forEach(ev => input.addEventListener(ev, stop, { passive: true }));
+
+    let finished = false;
+    const save = async () => {
+      if (finished) return;
+      finished = true;
+      const newText = input.value.trim();
+      if (newText && newText !== item.text) {
+        try {
+          await updateDoc(doc(db, 'family', 'shared', currentTab, id), { text: newText });
+          haptic();
+          showToast('Изменено');
+        } catch (error) {
+          console.error('Ошибка редактирования:', error);
+          showToast('Ошибка при изменении', 'error');
+        }
+      }
+      // Снимок onSnapshot перерисует строку; если нет изменений — восстановим из item
+      if (!newText || newText === item.text) loadListData();
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      else if (e.key === 'Escape') { finished = true; loadListData(); }
+    });
+    input.addEventListener('blur', save);
+  });
 
   const swipeContent = li.querySelector('.swipe-content');
   let startX = 0, startY = 0, translateX = 0, isSwiping = false;
@@ -422,9 +600,11 @@ function renderItem(id, item) {
     document.removeEventListener('mouseup', end);
     try {
       if (translateX > threshold) {
+        haptic();
         await updateDoc(doc(db, 'family', 'shared', currentTab, id), { completed: !item.completed });
         showToast(!item.completed ? 'Выполнено' : 'Возвращено');
       } else if (translateX < -threshold) {
+        haptic([10, 30, 10]);
         li.style.transition = 'all 0.3s ease';
         li.style.transform = 'translateX(-100%)';
         li.style.opacity = '0';
@@ -491,6 +671,8 @@ function resetCoffeeForm() {
   coffeeGrind.value = '';
   coffeeTemp.value = '';
   coffeeWater.value = '';
+  if (coffeeNotes) coffeeNotes.value = '';
+  setCoffeeRating(0);
 }
 
 if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
@@ -505,11 +687,14 @@ if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
     grind: coffeeGrind.value ? parseInt(coffeeGrind.value) : null,
     temp: coffeeTemp.value ? parseFloat(coffeeTemp.value) : null,
     totalWater: coffeeWater.value ? parseInt(coffeeWater.value) : null,
+    notes: coffeeNotes && coffeeNotes.value.trim() ? coffeeNotes.value.trim() : null,
+    rating: coffeeRating || null,
     createdBy: currentUser.email,
     createdAt: serverTimestamp()
   };
   try {
     await addDoc(collection(db, 'family', 'shared', 'coffee'), recipe);
+    haptic();
     showToast('Рецепт сохранён');
     resetCoffeeForm();
   } catch (error) {
@@ -521,7 +706,12 @@ if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
 function loadCoffeeRecipes() {
   if (unsubscribeCoffee) unsubscribeCoffee();
   const q = query(collection(db, 'family', 'shared', 'coffee'), orderBy('createdAt', 'desc'));
-  unsubscribeCoffee = onSnapshot(q, (snapshot) => {
+  unsubscribeCoffee = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+    if (snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache) {
+      setSyncState('syncing');
+    } else {
+      setSyncState('synced');
+    }
     coffeeRecipesList.innerHTML = '';
     snapshot.forEach(docSnap => renderCoffeeRecipe(docSnap.id, docSnap.data()));
   }, error => console.error('Ошибка загрузки рецептов:', error));
@@ -548,11 +738,14 @@ function renderCoffeeRecipe(id, data) {
     data.totalWater ? { label: 'Вода',  value: `${data.totalWater} мл`} : null,
   ].filter(Boolean);
 
+  const ratingStr = data.rating ? '★'.repeat(data.rating) + '☆'.repeat(5 - data.rating) : '';
+
   card.innerHTML = `
     <div class="coffee-recipe-header">
       <div class="coffee-recipe-name">${escapeHtml(data.name)}</div>
       <button class="coffee-recipe-delete" data-id="${id}">✕</button>
     </div>
+    ${ratingStr ? `<div class="coffee-recipe-rating">${ratingStr}</div>` : ''}
     ${meta ? `<div class="coffee-recipe-meta">${meta}</div>` : ''}
     ${params.length ? `
       <div class="coffee-recipe-params">
@@ -564,6 +757,7 @@ function renderCoffeeRecipe(id, data) {
         `).join('')}
       </div>
     ` : ''}
+    ${data.notes ? `<div class="coffee-recipe-notes">${escapeHtml(data.notes)}</div>` : ''}
   `;
 
   card.querySelector('.coffee-recipe-delete').addEventListener('click', async (e) => {
@@ -625,7 +819,18 @@ if (notifBtn) {
       return;
     }
     if (Notification.permission === 'granted' && currentFCMToken) {
-      showToast('Уведомления уже включены ✓', 'success');
+      try {
+        const testNotif = httpsCallable(functions, 'testNotification');
+        const res = await testNotif();
+        if (res.data?.success) {
+          showToast(`Тест отправлен (${res.data.sent})`, 'success');
+        } else {
+          showToast(res.data?.message || 'Нет токенов', 'warning');
+        }
+      } catch (error) {
+        console.error('Ошибка теста уведомлений:', error);
+        showToast('Ошибка отправки теста', 'error');
+      }
       return;
     }
     await initFCMToken();

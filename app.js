@@ -120,8 +120,14 @@ async function initFCMToken(interactive = false) {
       return;
     }
     currentFCMToken = token;
-    const saveToken = httpsCallable(functions, 'saveUserToken');
-    await saveToken({ token });
+    // Пишем токен напрямую в Firestore (бесплатно и без Cloud Functions)
+if (currentUser) {
+  await setDoc(doc(db, 'family', 'shared', 'tokens', currentUser.uid), {
+    token: token,
+    email: currentUser.email,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+}
     updateNotifBtn();
     if (interactive) showToast('Уведомления включены ✓', 'success');
   } catch (error) {

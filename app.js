@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v13';
+const APP_VERSION = 'v14';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -102,13 +102,18 @@ async function initFCMToken(interactive = false) {
       return;
     }
     if (interactive) showToast('Получаю токен…', 'success');
-    // Привязываем push-подписку к управляющему SW (sw.js), а не к случайной регистрации
-    const swReg = await navigator.serviceWorker.ready;
-    // Таймаут: на iOS getToken иногда зависает без ошибки — превращаем зависание в сообщение
+    // Этап 1: ждём активный SW (с таймаутом — на iOS .ready может зависнуть)
+    const swReg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('SW не активировался (таймаут 8с)')), 8000))
+    ]);
+    if (interactive) showToast('SW готов, запрос токена…', 'success');
+    // Этап 2: getToken — на iOS иногда зависает без ошибки
     const token = await Promise.race([
       getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('таймаут 15с — подписка не отвечает')), 15000))
+        setTimeout(() => reject(new Error('getToken таймаут 15с')), 15000))
     ]);
     if (!token) {
       if (interactive) showToast('Токен пустой', 'error');

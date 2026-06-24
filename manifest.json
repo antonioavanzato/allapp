@@ -4,8 +4,8 @@
   "description": "Удобный менеджер покупок и задач с уведомлениями",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f2f2f7",
-  "theme_color": "#007aff",
+  "background_color": "#f4f1ea",
+  "theme_color": "#b14a36",
   "orientation": "portrait",
   "icons": [
     {

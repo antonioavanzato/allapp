@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v15';
+const APP_VERSION = 'v16';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -857,7 +857,8 @@ if (notifBtn) {
         }
       } catch (error) {
         console.error('Ошибка теста уведомлений:', error);
-        showToast('Ошибка отправки теста', 'error');
+        const code = error?.code || error?.message || 'неизвестно';
+        showToast('Тест: ' + code, 'error');
       }
       return;
     }

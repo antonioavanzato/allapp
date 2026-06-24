@@ -18,7 +18,7 @@ const messaging = firebase.messaging();
 // ────────────────────────────────────────────────────────────────────────
 // 1. КЭШИРОВАНИЕ РЕСУРСОВ
 // ────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'allapp-cache-v9';
+const CACHE_NAME = 'allapp-cache-v11';
 const urlsToCache = [
   './',
   './index.html',

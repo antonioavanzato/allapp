@@ -504,6 +504,38 @@ li.swiping-left .swipe-content {
   border-radius: 8px;
 }
 
+.item-edit {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px 8px;
+  margin-left: 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.item-edit:active {
+  background: rgba(142, 142, 147, 0.15);
+  opacity: 1;
+}
+
+.item-edit-input {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 10px;
+  border: 1px solid var(--accent, #007aff);
+  border-radius: 10px;
+  background: var(--card-bg-solid);
+  color: inherit;
+  outline: none;
+  width: 100%;
+}
+
 /* ── Swipe Actions ── */
 .swipe-actions {
   position: absolute;

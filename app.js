@@ -377,8 +377,51 @@ function renderItem(id, item) {
         ${escapeHtml(item.text)}
         ${displayName ? `<span class="user-name">${escapeHtml(displayName)}</span>` : ''}
       </span>
+      <button class="item-edit" title="Редактировать" aria-label="Редактировать">✎</button>
     </div>
   `;
+
+  const editBtn = li.querySelector('.item-edit');
+  const stop = e => e.stopPropagation();
+  // Не даём кнопке запускать свайп
+  ['mousedown', 'touchstart', 'click'].forEach(ev => editBtn.addEventListener(ev, stop, ev === 'touchstart' ? { passive: true } : false));
+
+  editBtn.addEventListener('click', () => {
+    const content = li.querySelector('.swipe-content');
+    if (!content || content.querySelector('.item-edit-input')) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'item-edit-input';
+    input.value = item.text;
+    content.innerHTML = '';
+    content.appendChild(input);
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    ['mousedown', 'touchstart'].forEach(ev => input.addEventListener(ev, stop, { passive: true }));
+
+    let finished = false;
+    const save = async () => {
+      if (finished) return;
+      finished = true;
+      const newText = input.value.trim();
+      if (newText && newText !== item.text) {
+        try {
+          await updateDoc(doc(db, 'family', 'shared', currentTab, id), { text: newText });
+          showToast('Изменено');
+        } catch (error) {
+          console.error('Ошибка редактирования:', error);
+          showToast('Ошибка при изменении', 'error');
+        }
+      }
+      // Снимок onSnapshot перерисует строку; если нет изменений — восстановим из item
+      if (!newText || newText === item.text) loadListData();
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      else if (e.key === 'Escape') { finished = true; loadListData(); }
+    });
+    input.addEventListener('blur', save);
+  });
 
   const swipeContent = li.querySelector('.swipe-content');
   let startX = 0, startY = 0, translateX = 0, isSwiping = false;
@@ -625,7 +668,18 @@ if (notifBtn) {
       return;
     }
     if (Notification.permission === 'granted' && currentFCMToken) {
-      showToast('Уведомления уже включены ✓', 'success');
+      try {
+        const testNotif = httpsCallable(functions, 'testNotification');
+        const res = await testNotif();
+        if (res.data?.success) {
+          showToast(`Тест отправлен (${res.data.sent})`, 'success');
+        } else {
+          showToast(res.data?.message || 'Нет токенов', 'warning');
+        }
+      } catch (error) {
+        console.error('Ошибка теста уведомлений:', error);
+        showToast('Ошибка отправки теста', 'error');
+      }
       return;
     }
     await initFCMToken();

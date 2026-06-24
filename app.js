@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v19';
+const APP_VERSION = 'v20';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -156,10 +156,10 @@ function updateNotifBtn() {
 }
 
 async function removeFCMToken() {
-  if (!currentFCMToken) return;
+  if (!currentUser) return;
   try {
-    const removeToken = httpsCallable(functions, 'removeUserToken');
-    await removeToken({ token: currentFCMToken });
+    // Удаляем токен напрямую из Firestore (как и сохраняем — без Cloud Functions)
+    await deleteDoc(doc(db, 'family', 'shared', 'tokens', currentUser.uid));
     currentFCMToken = null;
   } catch (error) {
     console.error('Ошибка удаления FCM токена:', error);

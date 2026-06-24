@@ -1,22 +1,23 @@
-const CACHE_NAME = 'allapp-cache-v14';
+const CACHE_NAME = 'allapp-cache-v15';
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-192.png'
 ];
 
 // Файлы которые всегда берём из сети (не из кэша)
 const networkFirstFiles = ['index.html', 'style.css', 'app.js'];
 
 self.addEventListener('install', (event) => {
-  // Не активируемся сразу — ждём команды от страницы (кнопка «Обновить»)
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then((cache) =>
+      // Устойчиво: 404 одного файла НЕ ломает установку SW (иначе SW не активируется)
+      Promise.allSettled(urlsToCache.map((url) => cache.add(url)))
+    )
   );
 });
 

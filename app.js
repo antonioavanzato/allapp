@@ -501,9 +501,9 @@ async function addItem() {
 
     // === ОТПРАВЛЯЕМ ПУШ СЕМЬЕ ===
     const senderName = getUserDisplayName(currentUser.email);
-    const tabName = currentTab === 'shopping' ? 'в список покупок' : 'в задачи';
-    notifyFamily("НАШ ДОМ 🏡", `${senderName} добавил(а) "${text}" ${tabName}`);
-
+const actionText = currentTab === 'shopping' ? 'добавил в покупки:' : 'добавил в задачи:';
+notifyFamily(`${senderName} ${actionText}`, `"${text}"`);
+    
   } catch (error) {
     console.error('Ошибка при добавлении:', error);
     showToast('Ошибка при добавлении', 'error');

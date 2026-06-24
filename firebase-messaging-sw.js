@@ -11,10 +11,12 @@ const firebaseConfig = {
   appId: "1:492414694516:web:f4fa51805c05e6c545cd21"
 };
 
+// Инициализируем Firebase App и Messaging (Критически важно для работы getToken)
 firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging(); 
 
 // ────────────────────────────────────────────────────────────────────────
-// 1. КЭШИРОВАНИЕ (из старого sw.js)
+// 1. КЭШИРОВАНИЕ РЕСУРСОВ
 // ────────────────────────────────────────────────────────────────────────
 const CACHE_NAME = 'allapp-cache-v9';
 const urlsToCache = [
@@ -82,58 +84,21 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ────────────────────────────────────────────────────────────────────────
-// 2. БЕЗОПАСНАЯ ОБРАБОТКА PUSH (С учетом путей GitHub Pages и структуры FCM)
+// 2. ОФИЦИАЛЬНЫЙ ОБРАБОТЧИК УВЕДОМЛЕНИЙ FIREBASE
 // ────────────────────────────────────────────────────────────────────────
-self.addEventListener('push', function(event) {
-  console.log('🔥 Push получен:', event);
-  
-  let data = {};
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      try {
-        data = { title: 'AllApp', body: event.data.text() };
-      } catch (err) {
-        data = { title: 'AllApp', body: 'Новое сообщение' };
-      }
-    }
-  }
+messaging.onBackgroundMessage((payload) => {
+  console.log('🔥 Получено фоновое сообщение:', payload);
 
-  // Безопасный разбор вложенных полей FCM
-  const title = data.notification?.title || data.title || 'AllApp';
-  const body = data.notification?.body || data.body || 'Новое обновление';
-  const payloadData = data.data || {};
-
+  const title = payload.notification?.title || 'AllApp';
   const options = {
-    body: body,
-    icon: '/allapp/icons/icon-192.png', // Точный путь для GitHub Pages
+    body: payload.notification?.body || 'Новое обновление',
+    icon: '/allapp/icons/icon-192.png', // Абсолютный путь для GitHub Pages
     badge: '/allapp/icons/icon-192.png',
     data: {
-      url: payloadData.url || '/allapp/',
-      type: payloadData.type || 'shopping'
+      url: payload.data?.url || '/allapp/',
+      type: payload.data?.type || 'shopping'
     }
   };
 
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-      .catch(err => console.error('Ошибка показа уведомления:', err))
-  );
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        for (const client of clientList) {
-          if (client.url.includes('/allapp/') && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        if (clients.openWindow) {
-          return clients.openWindow('https://antonioavanzato.github.io/allapp/');
-        }
-      })
-  );
+  return self.registration.showNotification(title, options);
 });

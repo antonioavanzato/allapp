@@ -29,6 +29,9 @@
   --radius: 10px;
   --radius-sm: 7px;
 
+  --font-jp: "Zen Kaku Gothic New", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mincho: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+
   --transition-spring: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -140,9 +143,10 @@ button:active {
 }
 
 .auth-container h2 {
+  font-family: var(--font-mincho);
   font-size: 28px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
   text-align: center;
 }
 
@@ -233,9 +237,10 @@ button:active {
 }
 
 h1 {
-  font-size: 22px;
+  font-family: var(--font-mincho);
+  font-size: 21px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
 }
 
 .title-wrap {
@@ -329,7 +334,7 @@ h1 {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 120px;
@@ -821,9 +826,10 @@ li.swiping-left .swipe-content {
   align-items: center;
   cursor: pointer;
   list-style: none;
+  font-family: var(--font-jp);
   font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   color: var(--text-main);
 }
 
@@ -949,9 +955,10 @@ details[open] .coffee-summary-arrow {
 }
 
 .coffee-recipe-name {
+  font-family: var(--font-jp);
   font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   color: var(--accent);
   flex: 1;
   padding-right: 12px;
@@ -1223,4 +1230,66 @@ details[open] .coffee-summary-arrow {
   .bottom-nav {
     max-width: calc(100% - 32px);
   }
+}
+
+/* ──────────────────────────────────────────────
+   間 · 印 — японские акценты
+   ────────────────────────────────────────────── */
+
+/* Печать-ханko 済 («сделано») на выполненных пунктах */
+.item-text.completed::before {
+  content: "済";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--color-delete);
+  border-radius: 4px;
+  color: var(--color-delete);
+  font-family: var(--font-mincho);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  transform: rotate(-7deg);
+  opacity: 0.8;
+}
+
+/* Бледный иероглиф-водяной знак в углу раздела */
+.list-section,
+.coffee-list {
+  position: relative;
+  overflow: hidden;
+}
+
+.list-section::after,
+.coffee-list::after {
+  position: absolute;
+  top: -14px;
+  right: -2px;
+  font-family: var(--font-mincho);
+  font-size: 88px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0.05;
+  pointer-events: none;
+  user-select: none;
+}
+
+.content[data-tab="shopping"] .list-section::after { content: "買"; }
+.content[data-tab="tasks"] .list-section::after { content: "事"; }
+.coffee-list::after { content: "茶"; }
+
+/* Заголовки разделов — японская гарнитура */
+.list-section-title,
+.quick-title,
+.coffee-title {
+  font-family: var(--font-jp);
+}
+
+.coffee-recipe-rating,
+.coffee-rating .star {
+  font-family: var(--font-mincho);
 }

@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v5';
+const APP_VERSION = 'v6';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -217,6 +217,13 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// Лёгкая вибро-отдача (где поддерживается; на iOS — best effort)
+function haptic(pattern = 12) {
+  try {
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  } catch (_) {}
+}
+
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast-message');
   if (!toast) return;
@@ -404,6 +411,7 @@ async function clearCompleted() {
     const batch = writeBatch(db);
     ids.forEach(id => batch.delete(doc(db, 'family', 'shared', currentTab, id)));
     await batch.commit();
+    haptic([10, 30, 10]);
     showToast(`Удалено: ${ids.length}`);
   } catch (error) {
     console.error('Ошибка очистки:', error);
@@ -425,6 +433,7 @@ async function addItem() {
       createdBy: currentUser.email,
       createdByName: getUserDisplayName(currentUser.email)
     });
+    haptic();
     showToast(`Добавлено: ${text}`);
     scrollToNewItem();
   } catch (error) {
@@ -448,6 +457,7 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
         createdBy: currentUser.email,
         createdByName: getUserDisplayName(currentUser.email)
       });
+      haptic();
       showToast(`Добавлено: ${product}`);
       scrollToNewItem();
     } catch (error) {
@@ -493,6 +503,7 @@ function renderItem(id, item) {
     const setQty = async (newQty) => {
       newQty = Math.max(1, newQty);
       if (newQty === qty) return;
+      haptic(8);
       try {
         await updateDoc(doc(db, 'family', 'shared', currentTab, id), { qty: newQty });
       } catch (error) {
@@ -530,6 +541,7 @@ function renderItem(id, item) {
       if (newText && newText !== item.text) {
         try {
           await updateDoc(doc(db, 'family', 'shared', currentTab, id), { text: newText });
+          haptic();
           showToast('Изменено');
         } catch (error) {
           console.error('Ошибка редактирования:', error);
@@ -588,9 +600,11 @@ function renderItem(id, item) {
     document.removeEventListener('mouseup', end);
     try {
       if (translateX > threshold) {
+        haptic();
         await updateDoc(doc(db, 'family', 'shared', currentTab, id), { completed: !item.completed });
         showToast(!item.completed ? 'Выполнено' : 'Возвращено');
       } else if (translateX < -threshold) {
+        haptic([10, 30, 10]);
         li.style.transition = 'all 0.3s ease';
         li.style.transform = 'translateX(-100%)';
         li.style.opacity = '0';
@@ -680,6 +694,7 @@ if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
   };
   try {
     await addDoc(collection(db, 'family', 'shared', 'coffee'), recipe);
+    haptic();
     showToast('Рецепт сохранён');
     resetCoffeeForm();
   } catch (error) {
@@ -691,7 +706,12 @@ if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
 function loadCoffeeRecipes() {
   if (unsubscribeCoffee) unsubscribeCoffee();
   const q = query(collection(db, 'family', 'shared', 'coffee'), orderBy('createdAt', 'desc'));
-  unsubscribeCoffee = onSnapshot(q, (snapshot) => {
+  unsubscribeCoffee = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+    if (snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache) {
+      setSyncState('syncing');
+    } else {
+      setSyncState('synced');
+    }
     coffeeRecipesList.innerHTML = '';
     snapshot.forEach(docSnap => renderCoffeeRecipe(docSnap.id, docSnap.data()));
   }, error => console.error('Ошибка загрузки рецептов:', error));

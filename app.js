@@ -8,7 +8,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v21';
+const APP_VERSION = 'v22';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -552,15 +552,6 @@ function renderItem(id, item) {
   if (!itemsList) return;
   const li = document.createElement('li');
   const displayName = item.createdByName || getUserDisplayName(item.createdBy);
-  const isShopping = currentTab === 'shopping';
-  const qty = item.qty && item.qty > 0 ? item.qty : 1;
-
-  const qtyHtml = isShopping ? `
-      <div class="item-qty">
-        <button class="qty-btn qty-minus" aria-label="Меньше">−</button>
-        <span class="qty-value">${qty}</span>
-        <button class="qty-btn qty-plus" aria-label="Больше">+</button>
-      </div>` : '';
 
   li.innerHTML = `
     <div class="swipe-actions">
@@ -572,30 +563,9 @@ function renderItem(id, item) {
         ${escapeHtml(item.text)}
         ${displayName ? `<span class="user-name">${escapeHtml(displayName)}</span>` : ''}
       </span>
-      ${qtyHtml}
       <button class="item-edit" title="Редактировать" aria-label="Редактировать">✎</button>
     </div>
   `;
-
-  const qtyEl = li.querySelector('.item-qty');
-  if (qtyEl) {
-    const stopQty = e => e.stopPropagation();
-    ['mousedown', 'touchstart', 'click'].forEach(ev =>
-      qtyEl.addEventListener(ev, stopQty, ev === 'touchstart' ? { passive: true } : false));
-    const setQty = async (newQty) => {
-      newQty = Math.max(1, newQty);
-      if (newQty === qty) return;
-      haptic(8);
-      try {
-        await updateDoc(doc(db, 'family', 'shared', currentTab, id), { qty: newQty });
-      } catch (error) {
-        console.error('Ошибка количества:', error);
-        showToast('Ошибка', 'error');
-      }
-    };
-    qtyEl.querySelector('.qty-plus').addEventListener('click', () => setQty(qty + 1));
-    qtyEl.querySelector('.qty-minus').addEventListener('click', () => setQty(qty - 1));
-  }
 
   const editBtn = li.querySelector('.item-edit');
   const stop = e => e.stopPropagation();

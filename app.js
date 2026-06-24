@@ -7,6 +7,12 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
+const APP_VERSION = 'v5';
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('app-version');
+  if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
+});
+
 const firebaseConfig = {
   apiKey: "AIzaSyAICtDB0Rie_2W2DAoX0MOJm7kDSbTAEUA",
   authDomain: "allapp-16e47.firebaseapp.com",
@@ -225,7 +231,29 @@ offlineBar.className = 'offline-bar';
 offlineBar.textContent = '⚡ Нет соединения — изменения сохранятся при подключении';
 document.body.prepend(offlineBar);
 
+const syncDot = document.getElementById('sync-dot');
+let syncIdleTimer = null;
+function setSyncState(state) {
+  if (!syncDot) return;
+  if (!navigator.onLine) state = 'offline';
+  syncDot.classList.remove('synced', 'syncing', 'offline');
+  syncDot.classList.add(state);
+  if (state === 'syncing') {
+    syncDot.title = 'Синхронизация…';
+    // По завершении активности возвращаемся к «подключено»
+    clearTimeout(syncIdleTimer);
+    syncIdleTimer = setTimeout(() => {
+      if (navigator.onLine) setSyncState('synced');
+    }, 1200);
+  } else if (state === 'offline') {
+    syncDot.title = 'Нет соединения';
+  } else {
+    syncDot.title = 'Синхронизировано';
+  }
+}
+
 function setOfflineState(isOffline) {
+  setSyncState(isOffline ? 'offline' : 'synced');
   if (isOffline) {
     document.body.classList.add('is-offline');
     offlineBar.classList.add('visible');
@@ -339,7 +367,13 @@ function loadListData() {
   if (unsubscribe) unsubscribe();
   if (!currentUser) return;
   const q = query(collection(db, 'family', 'shared', currentTab), orderBy('createdAt', 'desc'));
-  unsubscribe = onSnapshot(q, (snapshot) => {
+  unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+    // Точка-индикатор: пульсирует при незавершённой записи, зелёная при синхроне
+    if (snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache) {
+      setSyncState('syncing');
+    } else {
+      setSyncState('synced');
+    }
     itemsList.innerHTML = '';
     completedDocIds = [];
     if (snapshot.empty) {

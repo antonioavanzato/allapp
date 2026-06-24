@@ -19,7 +19,7 @@ const firebaseConfig = {
   projectId: "allapp-16e47",
   storageBucket: "allapp-16e47.firebasestorage.app",
   messagingSenderId: "492414694516",
-  appId: "1:492414694516:web:f4fa51805c05e5c545cd21"
+  appId: "1:492414694516:web:f4fa51805c05e6c545cd21"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -63,7 +63,8 @@ if ('serviceWorker' in navigator) {
         });
       });
     }).catch((err) => {
-      console.error('Ошибка регистрации Service Worker:', err);
+      // ПОКАЖЕТ НА ЭКРАНЕ, ЕСЛИ СЕРВИС-ВОРКЕР НЕ СМОГ ЗАРЕГИСТРИРОВАТЬСЯ
+      alert(`❌ Ошибка регистрации Service Worker: ${err}`);
     });
 
     // Когда новый воркер взял управление по нашей команде — перезагружаем один раз
@@ -92,37 +93,55 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initFCMToken() {
+  alert('🔍 [Диагностика] Шаг 1: Метод initFCMToken запущен');
   try {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window)) {
+      alert('❌ [Диагностика] Ошибка: Notifications не поддерживаются этим браузером');
+      return;
+    }
     
     // 1. Запрашиваем разрешение
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return;
+    alert(`🔍 [Диагностика] Шаг 2: Статус разрешения на уведомления = "${permission}"`);
+    if (permission !== 'granted') {
+      alert('⚠️ [Диагностика] Шаг 2.1: Доступ к уведомлениям не разрешен (permission !== "granted")');
+      return;
+    }
 
-    // 2. Ждем, когда Service Worker гарантированно станет ACTIVE в системе.
-    // Браузер вернет готовую регистрацию только тогда, когда статус воркера станет active.
+    // 2. Ждем готовности Service Worker
+    alert('🔍 [Диагностика] Шаг 3: Ожидаем готовности Service Worker (.ready)...');
     const activeRegistration = await navigator.serviceWorker.ready;
+    alert(`🔍 [Диагностика] Шаг 4: Воркер готов! Активен: ${activeRegistration && activeRegistration.active ? 'Да' : 'Нет'}`);
 
     if (!activeRegistration) {
-      console.error('Service Worker не найден или не готов');
+      alert('❌ [Диагностика] Ошибка: activeRegistration пустой');
       return;
     }
 
     // 3. Запрашиваем токен, передавая строго активный воркер
+    alert('🔍 [Диагностика] Шаг 5: Отправляем запрос токена в Google FCM API...');
     const token = await getToken(messaging, { 
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: activeRegistration // Используем гарантированно активный воркер
     });
 
-    if (!token) return;
+    alert(`🔍 [Диагностика] Шаг 6: Ответ получен! Токен = ${token ? (token.substring(0, 10) + '...') : 'ПУСТОЙ'}`);
+    if (!token) {
+      alert('⚠️ [Диагностика] Шаг 6.1: Получен пустой токен, выход');
+      return;
+    }
+    
     currentFCMToken = token;
     
+    alert('🔍 [Диагностика] Шаг 7: Отправляем токен на бэкенд (saveUserToken)...');
     const saveToken = httpsCallable(functions, 'saveUserToken');
     await saveToken({ token });
+    
+    alert('🔍 [Диагностика] Шаг 8: Токен сохранен! Обновляем статус колокольчика...');
     updateNotifBtn();
+    alert('🎉 [Диагностика] Шаг 9: Всё готово! Колокольчик должен стать цветным.');
   } catch (error) {
-    console.error('Ошибка FCM:', error);
-    alert(`Ошибка регистрации уведомлений: ${error.message || error}`);
+    alert(`❌ КРИТИЧЕСКАЯ ОШИБКА: ${error.message || error}`);
   }
 }
 
@@ -857,3 +876,5 @@ if (notifBtn) {
   });
   updateNotifBtn();
 }
+
+--- END OF FILE Paste June 24, 2026 - 2:01PM ---

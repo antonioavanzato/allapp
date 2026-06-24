@@ -1,4 +1,3 @@
-// firebase-messaging-sw.js
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
@@ -11,94 +10,60 @@ const firebaseConfig = {
   appId: "1:492414694516:web:f4fa51805c05e6c545cd21"
 };
 
-// Инициализируем Firebase App и Messaging (Критически важно для работы getToken)
 firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging(); 
 
-// ────────────────────────────────────────────────────────────────────────
-// 1. КЭШИРОВАНИЕ РЕСУРСОВ
-// ────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'allapp-cache-v11';
-const urlsToCache = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './manifest.json',
-  './firebase-messaging-sw.js',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
-];
+// ⚠️ ВАЖНО: Не вызываем messaging() и не используем onBackgroundMessage
+// Вместо этого — чистый push-обработчик
 
-const networkFirstFiles = ['index.html', 'style.css', 'app.js'];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
-  );
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', (event) => {
-  const url = event.request.url;
-  const isNetworkFirst = networkFirstFiles.some(file => url.includes(file));
-
-  if (isNetworkFirst) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
-  } else {
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => response || fetch(event.request))
-    );
-  }
-});
-
-// ────────────────────────────────────────────────────────────────────────
-// 2. ОФИЦИАЛЬНЫЙ ОБРАБОТЧИК УВЕДОМЛЕНИЙ FIREBASE
-// ────────────────────────────────────────────────────────────────────────
-messaging.onBackgroundMessage((payload) => {
-  console.log('🔥 Получено фоновое сообщение:', payload);
-
-  const title = payload.notification?.title || 'AllApp';
-  const options = {
-    body: payload.notification?.body || 'Новое обновление',
-    icon: '/allapp/icons/icon-192.png', // Абсолютный путь для GitHub Pages
-    badge: '/allapp/icons/icon-192.png',
-    data: {
-      url: payload.data?.url || '/allapp/',
-      type: payload.data?.type || 'shopping'
+self.addEventListener('push', function(event) {
+  console.log('🔥 Чистый push получен:', event);
+  
+  let data = {};
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { title: 'AllApp', body: event.data.text() };
     }
+  }
+
+  const title = data.notification?.title || data.title || 'AllApp';
+  const options = {
+    body: data.notification?.body || data.body || 'Новое обновление',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: {
+      url: data.data?.url || '/',
+      type: data.data?.type || 'shopping'
+    },
+    actions: [
+      { action: 'open', title: 'Открыть' },
+      { action: 'close', title: 'Закрыть' }
+    ]
   };
 
-  return self.registration.showNotification(title, options);
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Обработка клика по уведомлению (оставляем как есть)
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  if (event.action === 'close') return;
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (client.url.includes('/allapp/') && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        if (clients.openWindow) {
+          return clients.openWindow('https://antonioavanzato.github.io/allapp/');
+        }
+      })
+  );
 });

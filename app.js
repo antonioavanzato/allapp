@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v18';
+const APP_VERSION = 'v19';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -527,6 +527,10 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
       haptic();
       showToast(`Добавлено: ${product}`);
       scrollToNewItem();
+
+      // === ОТПРАВЛЯЕМ ПУШ СЕМЬЕ ===
+      const senderName = getUserDisplayName(currentUser.email);
+      notifyFamily(`${senderName} добавил в покупки:`, `"${product}"`);
     } catch (error) {
       showToast('Ошибка при добавлении', 'error');
     }
@@ -762,6 +766,10 @@ if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
     haptic();
     showToast('Рецепт сохранён');
     resetCoffeeForm();
+
+    // === ОТПРАВЛЯЕМ ПУШ СЕМЬЕ ===
+    const senderName = getUserDisplayName(currentUser.email);
+    notifyFamily(`${senderName} добавил рецепт кофе:`, `"${name}"`);
   } catch (error) {
     console.error('Ошибка:', error);
     showToast('Ошибка', 'error');

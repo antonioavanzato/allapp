@@ -29,8 +29,8 @@
   --radius: 10px;
   --radius-sm: 7px;
 
-  --font-jp: "Zen Kaku Gothic New", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mincho: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+  --font-jp: "Jost", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mincho: "Jost", -apple-system, BlinkMacSystemFont, sans-serif;
 
   --transition-spring: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -76,7 +76,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-family: "Jost", -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--paper-deep);
   color: var(--text-main);
   height: 100dvh;

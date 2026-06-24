@@ -450,6 +450,33 @@ async function clearCompleted() {
 
 if (clearCompletedBtn) clearCompletedBtn.addEventListener('click', clearCompleted);
 
+// Функция, которая находит токены других членов семьи и отправляет им пуш
+async function notifyFamily(title, body) {
+  if (!currentUser) return;
+  try {
+    const tokensSnap = await getDocs(collection(db, 'family', 'shared', 'tokens'));
+    const gasUrl = "https://script.google.com/macros/s/AKfycbzfrr6OKSyPsNZCwtMSQOzRl45N00ftq8PpQb7mbH4-stWmz2prfgglJGy6WocPwQlq7A/exec";
+
+    tokensSnap.forEach(async (docSnap) => {
+      const data = docSnap.data();
+      // Отправляем пуш всем, кроме самого себя
+      if (docSnap.id !== currentUser.uid && data.token) {
+        await fetch(gasUrl, {
+          method: 'POST',
+          body: JSON.stringify({
+            token: data.token,
+            title: title,
+            body: body
+          })
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Ошибка отправки пушей семье:", error);
+  }
+}
+
+// Обновленная функция добавления товара/задачи
 async function addItem() {
   const text = itemInput?.value.trim();
   if (!text || !currentUser) return;
@@ -465,12 +492,17 @@ async function addItem() {
     haptic();
     showToast(`Добавлено: ${text}`);
     scrollToNewItem();
+
+    // === ОТПРАВЛЯЕМ ПУШ СЕМЬЕ ===
+    const senderName = getUserDisplayName(currentUser.email);
+    const tabName = currentTab === 'shopping' ? 'в список покупок' : 'в задачи';
+    notifyFamily("НАШ ДОМ 🏡", `${senderName} добавил(а) "${text}" ${tabName}`);
+
   } catch (error) {
     console.error('Ошибка при добавлении:', error);
     showToast('Ошибка при добавлении', 'error');
   }
 }
-
 if (addBtn) addBtn.addEventListener('click', addItem);
 if (itemInput) itemInput.addEventListener('keypress', e => { if (e.key === 'Enter') addItem(); });
 

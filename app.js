@@ -19,7 +19,7 @@ const firebaseConfig = {
   projectId: "allapp-16e47",
   storageBucket: "allapp-16e47.firebasestorage.app",
   messagingSenderId: "492414694516",
-  appId: "1:492414694516:web:f4fa51805c05e6c545cd21"
+  appId: "1:492414694516:web:f4fa51805c05e5c545cd21"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -30,7 +30,7 @@ const functions = getFunctions(app);
 
 const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q';
 let currentFCMToken = null;
-let swRegistration = null;
+let swRegistration = null; // Сохраняем объект регистрации глобально для использования в getToken
 
 let waitingWorker = null;
 let isReloading = false;
@@ -45,8 +45,10 @@ function showUpdateBanner(worker) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('firebase-messaging-sw.js');
-    navigator.serviceWorker.register('sw.js').then((registration) => {
+    // Регистрируем ОДИН объединенный Service Worker
+    navigator.serviceWorker.register('firebase-messaging-sw.js').then((registration) => {
+      swRegistration = registration; // Записываем регистрацию для получения токена
+
       // Уже ждёт новый воркер
       if (registration.waiting && navigator.serviceWorker.controller) {
         showUpdateBanner(registration.waiting);
@@ -60,6 +62,8 @@ if ('serviceWorker' in navigator) {
           }
         });
       });
+    }).catch((err) => {
+      console.error('Ошибка регистрации Service Worker:', err);
     });
 
     // Когда новый воркер взял управление по нашей команде — перезагружаем один раз
@@ -92,14 +96,27 @@ async function initFCMToken() {
     if (!('Notification' in window)) return;
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+
+    // Ждем готовности воркера, если он еще не успел записаться в переменную
+    if (!swRegistration) {
+      swRegistration = await navigator.serviceWorker.ready;
+    }
+
+    // Запрашиваем токен с явным указанием нашего Service Worker (критично для GitHub Pages)
+    const token = await getToken(messaging, { 
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swRegistration
+    });
+
     if (!token) return;
     currentFCMToken = token;
+    
     const saveToken = httpsCallable(functions, 'saveUserToken');
     await saveToken({ token });
     updateNotifBtn();
   } catch (error) {
     console.error('Ошибка FCM:', error);
+    alert(`Ошибка регистрации уведомлений: ${error.message || error}`);
   }
 }
 
@@ -218,7 +235,7 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-// Лёгкая вибро-отдача (где поддерживается; на iOS — best effort)
+// Лёгкая вибро-отдача
 function haptic(pattern = 12) {
   try {
     if (navigator.vibrate) navigator.vibrate(pattern);
@@ -248,7 +265,6 @@ function setSyncState(state) {
   syncDot.classList.add(state);
   if (state === 'syncing') {
     syncDot.title = 'Синхронизация…';
-    // По завершении активности возвращаемся к «подключено»
     clearTimeout(syncIdleTimer);
     syncIdleTimer = setTimeout(() => {
       if (navigator.onLine) setSyncState('synced');
@@ -376,7 +392,6 @@ function loadListData() {
   if (!currentUser) return;
   const q = query(collection(db, 'family', 'shared', currentTab), orderBy('createdAt', 'desc'));
   unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
-    // Точка-индикатор: пульсирует при незавершённой записи, зелёная при синхроне
     if (snapshot.metadata.hasPendingWrites || snapshot.metadata.fromCache) {
       setSyncState('syncing');
     } else {
@@ -518,7 +533,6 @@ function renderItem(id, item) {
 
   const editBtn = li.querySelector('.item-edit');
   const stop = e => e.stopPropagation();
-  // Не даём кнопке запускать свайп
   ['mousedown', 'touchstart', 'click'].forEach(ev => editBtn.addEventListener(ev, stop, ev === 'touchstart' ? { passive: true } : false));
 
   editBtn.addEventListener('click', () => {
@@ -549,7 +563,6 @@ function renderItem(id, item) {
           showToast('Ошибка при изменении', 'error');
         }
       }
-      // Снимок onSnapshot перерисует строку; если нет изменений — восстановим из item
       if (!newText || newText === item.text) loadListData();
     };
     input.addEventListener('keydown', e => {

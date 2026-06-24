@@ -25,21 +25,60 @@ const functions = getFunctions(app);
 const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q';
 let currentFCMToken = null;
 
+let waitingWorker = null;
+let isReloading = false;
+let updateInitiated = false;
+
+function showUpdateBanner(worker) {
+  waitingWorker = worker;
+  const banner = document.getElementById('update-banner');
+  if (!banner) return;
+  banner.classList.add('visible');
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('firebase-messaging-sw.js');
     navigator.serviceWorker.register('sw.js').then((registration) => {
+      // Уже ждёт новый воркер
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        showUpdateBanner(registration.waiting);
+      }
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
+        if (!newWorker) return;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showToast('Доступно обновление — перезагрузите страницу', 'warning');
+            showUpdateBanner(newWorker);
           }
         });
       });
     });
+
+    // Когда новый воркер взял управление по нашей команде — перезагружаем один раз
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (isReloading || !updateInitiated) return;
+      isReloading = true;
+      window.location.reload();
+    });
   });
 }
+
+function applyUpdate() {
+  const banner = document.getElementById('update-banner');
+  if (banner) banner.classList.remove('visible');
+  updateInitiated = true;
+  if (waitingWorker) {
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  } else {
+    window.location.reload();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const updateBtn = document.getElementById('update-banner-btn');
+  if (updateBtn) updateBtn.addEventListener('click', applyUpdate);
+});
 
 async function initFCMToken() {
   try {

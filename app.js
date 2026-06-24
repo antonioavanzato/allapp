@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v12';
+const APP_VERSION = 'v13';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -89,23 +89,29 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initFCMToken(interactive = false) {
   try {
     if (!('Notification' in window)) {
-      if (interactive) showToast('Уведомления не поддерживаются', 'error');
+      if (interactive) showToast('Push доступен только в установленной PWA', 'error');
       return;
     }
-    const permission = await Notification.requestPermission();
+    let permission = Notification.permission;
+    if (permission !== 'granted') {
+      permission = await Notification.requestPermission();
+    }
     if (permission !== 'granted') {
       if (interactive) showToast('Разрешите уведомления', 'warning');
       updateNotifBtn();
       return;
     }
+    if (interactive) showToast('Получаю токен…', 'success');
     // Привязываем push-подписку к управляющему SW (sw.js), а не к случайной регистрации
     const swReg = await navigator.serviceWorker.ready;
-    const token = await getToken(messaging, {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: swReg
-    });
+    // Таймаут: на iOS getToken иногда зависает без ошибки — превращаем зависание в сообщение
+    const token = await Promise.race([
+      getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('таймаут 15с — подписка не отвечает')), 15000))
+    ]);
     if (!token) {
-      if (interactive) showToast('Не удалось получить токен', 'error');
+      if (interactive) showToast('Токен пустой', 'error');
       return;
     }
     currentFCMToken = token;
@@ -826,8 +832,9 @@ if (qrPyaterochkaBtn) qrPyaterochkaBtn.addEventListener('click', () => showQRMod
 const notifBtn = document.getElementById('notif-btn');
 if (notifBtn) {
   notifBtn.addEventListener('click', async () => {
+    showToast('🔔 нажато…', 'success');
     if (!('Notification' in window)) {
-      showToast('Уведомления не поддерживаются', 'error');
+      showToast('Push доступен только в установленной PWA', 'error');
       return;
     }
     if (Notification.permission === 'denied') {

@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
   getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy,
-  serverTimestamp, setDoc, where, getDoc
+  serverTimestamp, setDoc, where, getDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
@@ -108,6 +108,7 @@ const quickContainer = document.getElementById('quick-products-container');
 const inputGroup = document.getElementById('input-group');
 const listSection = document.getElementById('list-section');
 const coffeeSection = document.getElementById('coffee-section');
+const clearCompletedBtn = document.getElementById('clear-completed-btn');
 
 const coffeeName = document.getElementById('coffee-name');
 const coffeeProcessing = document.getElementById('coffee-processing');
@@ -121,6 +122,7 @@ const coffeeSaveBtn = document.getElementById('coffee-save');
 const coffeeRecipesList = document.getElementById('coffee-recipes-list');
 
 let currentTab = 'shopping';
+let completedDocIds = [];
 let unsubscribe = null;
 let unsubscribeCoffee = null;
 let currentUser = null;
@@ -279,14 +281,43 @@ function loadListData() {
   const q = query(collection(db, 'family', 'shared', currentTab), orderBy('createdAt', 'desc'));
   unsubscribe = onSnapshot(q, (snapshot) => {
     itemsList.innerHTML = '';
+    completedDocIds = [];
     if (snapshot.empty) {
       emptyState.classList.remove('hidden');
     } else {
       emptyState.classList.add('hidden');
-      snapshot.forEach(docSnap => renderItem(docSnap.id, docSnap.data()));
+      const active = [], done = [];
+      snapshot.forEach(docSnap => {
+        (docSnap.data().completed ? done : active).push(docSnap);
+      });
+      completedDocIds = done.map(d => d.id);
+      active.forEach(docSnap => renderItem(docSnap.id, docSnap.data()));
+      done.forEach(docSnap => renderItem(docSnap.id, docSnap.data()));
     }
+    updateClearCompletedBtn();
   }, error => console.error('Ошибка загрузки:', error));
 }
+
+function updateClearCompletedBtn() {
+  if (!clearCompletedBtn) return;
+  clearCompletedBtn.classList.toggle('hidden', completedDocIds.length === 0);
+}
+
+async function clearCompleted() {
+  if (!currentUser || completedDocIds.length === 0) return;
+  const ids = [...completedDocIds];
+  try {
+    const batch = writeBatch(db);
+    ids.forEach(id => batch.delete(doc(db, 'family', 'shared', currentTab, id)));
+    await batch.commit();
+    showToast(`Удалено: ${ids.length}`);
+  } catch (error) {
+    console.error('Ошибка очистки:', error);
+    showToast('Ошибка при очистке', 'error');
+  }
+}
+
+if (clearCompletedBtn) clearCompletedBtn.addEventListener('click', clearCompleted);
 
 async function addItem() {
   const text = itemInput?.value.trim();
@@ -499,7 +530,15 @@ function loadCoffeeRecipes() {
 function renderCoffeeRecipe(id, data) {
   const card = document.createElement('div');
   card.className = 'coffee-recipe-card';
-  const roastDateStr = data.roastDate ? new Date(data.roastDate).toLocaleDateString('ru-RU') : null;
+  let roastDateStr = null;
+  if (data.roastDate) {
+    const d = new Date(data.roastDate);
+    roastDateStr = d.toLocaleDateString('ru-RU');
+    const roast = new Date(data.roastDate); roast.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((today - roast) / 86400000);
+    if (diffDays >= 0) roastDateStr += ` (${diffDays} дн.)`;
+  }
   const meta = [data.processing, roastDateStr].filter(Boolean).map(escapeHtml).join(' · ');
 
   const params = [

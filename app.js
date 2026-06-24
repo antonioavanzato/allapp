@@ -846,22 +846,36 @@ if (notifBtn) {
       showToast('Разрешите уведомления в настройках телефона', 'warning');
       return;
     }
+    
     if (Notification.permission === 'granted' && currentFCMToken) {
       try {
-        const testNotif = httpsCallable(functions, 'testNotification');
-        const res = await testNotif();
-        if (res.data?.success) {
-          showToast(`Тест отправлен (${res.data.sent})`, 'success');
+        showToast('Отправка в Apps Script...', 'success');
+        
+        // Ссылка на твой Google Apps Script
+        const gasUrl = "https://script.google.com/macros/s/AKfycbzfrr6OKSyPsNZCwtMSQOzRl45N00ftq8PpQb7mbH4-stWmz2prfgglJGy6WocPwQlq7A/exec";
+        
+        const response = await fetch(gasUrl, {
+          method: 'POST',
+          body: JSON.stringify({
+            token: currentFCMToken,
+            title: "НАШ ДОМ 🚀",
+            body: "Проверка связи с рабочим столом!"
+          })
+        });
+
+        const resData = await response.json();
+        if (resData.status === 'success') {
+          showToast('Успешно отправлено!', 'success');
         } else {
-          showToast(res.data?.message || 'Нет токенов', 'warning');
+          showToast('Ошибка: ' + resData.message, 'error');
         }
       } catch (error) {
-        console.error('Ошибка теста уведомлений:', error);
-        const code = error?.code || error?.message || 'неизвестно';
-        showToast('Тест: ' + code, 'error');
+        console.error('Ошибка:', error);
+        showToast('Ошибка сети Apps Script', 'error');
       }
       return;
     }
+    
     await initFCMToken(true);
   });
   updateNotifBtn();

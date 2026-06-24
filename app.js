@@ -30,6 +30,7 @@ const functions = getFunctions(app);
 
 const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q';
 let currentFCMToken = null;
+let swRegistration = null;
 
 let waitingWorker = null;
 let isReloading = false;

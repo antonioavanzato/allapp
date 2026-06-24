@@ -1,3 +1,4 @@
+// firebase-messaging-sw.js
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
@@ -12,47 +13,116 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// ⚠️ ВАЖНО: Не вызываем messaging() и не используем onBackgroundMessage
-// Вместо этого — чистый push-обработчик
+// ────────────────────────────────────────────────────────────────────────
+// 1. КЭШИРОВАНИЕ (из старого sw.js)
+// ────────────────────────────────────────────────────────────────────────
+const CACHE_NAME = 'allapp-cache-v9';
+const urlsToCache = [
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json',
+  './firebase-messaging-sw.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
+];
 
+const networkFirstFiles = ['index.html', 'style.css', 'app.js'];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(urlsToCache))
+  );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const url = event.request.url;
+  const isNetworkFirst = networkFirstFiles.some(file => url.includes(file));
+
+  if (isNetworkFirst) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+  } else {
+    event.respondWith(
+      caches.match(event.request)
+        .then((response) => response || fetch(event.request))
+    );
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────────
+// 2. БЕЗОПАСНАЯ ОБРАБОТКА PUSH (С учетом путей GitHub Pages и структуры FCM)
+// ────────────────────────────────────────────────────────────────────────
 self.addEventListener('push', function(event) {
-  console.log('🔥 Чистый push получен:', event);
+  console.log('🔥 Push получен:', event);
   
   let data = {};
   if (event.data) {
     try {
       data = event.data.json();
     } catch (e) {
-      data = { title: 'AllApp', body: event.data.text() };
+      try {
+        data = { title: 'AllApp', body: event.data.text() };
+      } catch (err) {
+        data = { title: 'AllApp', body: 'Новое сообщение' };
+      }
     }
   }
 
+  // Безопасный разбор вложенных полей FCM
   const title = data.notification?.title || data.title || 'AllApp';
+  const body = data.notification?.body || data.body || 'Новое обновление';
+  const payloadData = data.data || {};
+
   const options = {
-    body: data.notification?.body || data.body || 'Новое обновление',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    body: body,
+    icon: '/allapp/icons/icon-192.png', // Точный путь для GitHub Pages
+    badge: '/allapp/icons/icon-192.png',
     data: {
-      url: data.data?.url || '/',
-      type: data.data?.type || 'shopping'
-    },
-    actions: [
-      { action: 'open', title: 'Открыть' },
-      { action: 'close', title: 'Закрыть' }
-    ]
+      url: payloadData.url || '/allapp/',
+      type: payloadData.type || 'shopping'
+    }
   };
 
   event.waitUntil(
     self.registration.showNotification(title, options)
+      .catch(err => console.error('Ошибка показа уведомления:', err))
   );
 });
 
-// Обработка клика по уведомлению (оставляем как есть)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
-  if (event.action === 'close') return;
-  
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {

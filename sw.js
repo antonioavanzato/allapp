@@ -1,11 +1,10 @@
-const CACHE_NAME = 'allapp-cache-v9';
+const CACHE_NAME = 'allapp-cache-v10';
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
-  './firebase-messaging-sw.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
@@ -70,21 +69,48 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('push', (event) => {
   if (!event.data) return;
+  let data = {};
   try {
-    const data = event.data.json();
-    const options = {
-      body: data.body || 'Новое обновление в AllApp',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      data: data.data || {},
-      actions: [
-        { action: 'open', title: 'Открыть' }
-      ]
-    };
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'AllApp', options)
-    );
-  } catch (error) {
-    console.error('Ошибка:', error);
+    data = event.data.json();
+  } catch (e) {
+    data = { title: 'AllApp', body: event.data.text() };
   }
+
+  const title = data.notification?.title || data.title || 'AllApp';
+  const body  = data.notification?.body  || data.body  || 'Новое обновление';
+  const options = {
+    body,
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    data: {
+      url: data.data?.url || 'https://antonioavanzato.github.io/allapp/',
+      type: data.data?.type || 'shopping'
+    },
+    actions: [
+      { action: 'open', title: 'Открыть' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  if (event.action === 'close') return;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (client.url.includes('/allapp/') && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        if (clients.openWindow) {
+          return clients.openWindow('https://antonioavanzato.github.io/allapp/');
+        }
+      })
+  );
 });

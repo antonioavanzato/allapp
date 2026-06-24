@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v9';
+const APP_VERSION = 'v10';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -28,7 +28,7 @@ const auth = getAuth(app);
 const messaging = getMessaging(app);
 const functions = getFunctions(app);
 
-const VAPID_KEY = 'BC-iAqJhSKu2rylPzZnHypaJtx67mOu5_BHDUJMOUDSDlIfnWQo-1AZBKfnyk-EUSl51laRaJanX1sGEbnLob9Q';
+const VAPID_KEY = 'BEZcSno0f4ds-XO22p3cpn0aI_xOwkSkYH9PNoPVqy7WciJl4KpQbruWPw_7AsHyosDmkFp7EcyCQZLfFlj4UQ4';
 let currentFCMToken = null;
 
 let waitingWorker = null;
@@ -44,7 +44,7 @@ function showUpdateBanner(worker) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('firebase-messaging-sw.js');
+    // Один service worker на весь scope: и кэш, и push (без конфликта регистраций)
     navigator.serviceWorker.register('sw.js').then((registration) => {
       // Уже ждёт новый воркер
       if (registration.waiting && navigator.serviceWorker.controller) {
@@ -86,19 +86,36 @@ document.addEventListener('DOMContentLoaded', () => {
   if (updateBtn) updateBtn.addEventListener('click', applyUpdate);
 });
 
-async function initFCMToken() {
+async function initFCMToken(interactive = false) {
   try {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window)) {
+      if (interactive) showToast('Уведомления не поддерживаются', 'error');
+      return;
+    }
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return;
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
-    if (!token) return;
+    if (permission !== 'granted') {
+      if (interactive) showToast('Разрешите уведомления', 'warning');
+      updateNotifBtn();
+      return;
+    }
+    // Привязываем push-подписку к управляющему SW (sw.js), а не к случайной регистрации
+    const swReg = await navigator.serviceWorker.ready;
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swReg
+    });
+    if (!token) {
+      if (interactive) showToast('Не удалось получить токен', 'error');
+      return;
+    }
     currentFCMToken = token;
     const saveToken = httpsCallable(functions, 'saveUserToken');
     await saveToken({ token });
     updateNotifBtn();
+    if (interactive) showToast('Уведомления включены ✓', 'success');
   } catch (error) {
     console.error('Ошибка FCM:', error);
+    if (interactive) showToast('Ошибка уведомлений', 'error');
   }
 }
 
@@ -829,7 +846,7 @@ if (notifBtn) {
       }
       return;
     }
-    await initFCMToken();
+    await initFCMToken(true);
   });
   updateNotifBtn();
 }

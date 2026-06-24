@@ -7,7 +7,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v9';
+const APP_VERSION = 'v9-debug';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -30,7 +30,7 @@ const functions = getFunctions(app);
 
 const VAPID_KEY = 'BEZcSno0f4ds-XO22p3cpn0aI_xOwkSkYH9PNoPVqy7WciJl4KpQbruWPw_7AsHyosDmkFp7EcyCQZLfFlj4UQ4';
 let currentFCMToken = null;
-let swRegistration = null; // Сохраняем объект регистрации глобально для использования в getToken
+let swRegistration = null; 
 
 let waitingWorker = null;
 let isReloading = false;
@@ -45,11 +45,9 @@ function showUpdateBanner(worker) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Регистрируем ОДИН объединенный Service Worker
     navigator.serviceWorker.register('firebase-messaging-sw.js').then((registration) => {
-      swRegistration = registration; // Записываем регистрацию для получения токена
+      swRegistration = registration; 
 
-      // Уже ждёт новый воркер
       if (registration.waiting && navigator.serviceWorker.controller) {
         showUpdateBanner(registration.waiting);
       }
@@ -63,11 +61,9 @@ if ('serviceWorker' in navigator) {
         });
       });
     }).catch((err) => {
-      // ПОКАЖЕТ НА ЭКРАНЕ, ЕСЛИ СЕРВИС-ВОРКЕР НЕ СМОГ ЗАРЕГИСТРИРОВАТЬСЯ
       alert(`❌ Ошибка регистрации Service Worker: ${err}`);
     });
 
-    // Когда новый воркер взял управление по нашей команде — перезагружаем один раз
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (isReloading || !updateInitiated) return;
       isReloading = true;
@@ -93,23 +89,21 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initFCMToken() {
-  alert('🔍 [Диагностика] Шаг 1: Метод initFCMToken запущен');
+  alert('🔍 [Диагностика] Шаг 1: initFCMToken запущен');
   try {
     if (!('Notification' in window)) {
-      alert('❌ [Диагностика] Ошибка: Notifications не поддерживаются этим браузером');
+      alert('❌ [Диагностика] Ошибка: Notifications не поддерживаются');
       return;
     }
     
-    // 1. Запрашиваем разрешение
     const permission = await Notification.requestPermission();
-    alert(`🔍 [Диагностика] Шаг 2: Статус разрешения на уведомления = "${permission}"`);
+    alert(`🔍 [Диагностика] Шаг 2: Статус разрешения = "${permission}"`);
     if (permission !== 'granted') {
-      alert('⚠️ [Диагностика] Шаг 2.1: Доступ к уведомлениям не разрешен (permission !== "granted")');
+      alert('⚠️ [Диагностика] Доступ к уведомлениям отклонен');
       return;
     }
 
-    // 2. Ждем готовности Service Worker
-    alert('🔍 [Диагностика] Шаг 3: Ожидаем готовности Service Worker (.ready)...');
+    alert('🔍 [Диагностика] Шаг 3: Ожидаем готовности воркера (.ready)...');
     const activeRegistration = await navigator.serviceWorker.ready;
     alert(`🔍 [Диагностика] Шаг 4: Воркер готов! Активен: ${activeRegistration && activeRegistration.active ? 'Да' : 'Нет'}`);
 
@@ -118,28 +112,27 @@ async function initFCMToken() {
       return;
     }
 
-    // 3. Запрашиваем токен, передавая строго активный воркер
-    alert('🔍 [Диагностика] Шаг 5: Отправляем запрос токена в Google FCM API...');
+    alert('🔍 [Диагностика] Шаг 5: Запрашиваем токен Firebase...');
     const token = await getToken(messaging, { 
       vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: activeRegistration // Используем гарантированно активный воркер
+      serviceWorkerRegistration: activeRegistration
     });
 
-    alert(`🔍 [Диагностика] Шаг 6: Ответ получен! Токен = ${token ? (token.substring(0, 10) + '...') : 'ПУСТОЙ'}`);
+    alert(`🔍 [Диагностика] Шаг 6: Токен получен! Длина: ${token ? token.length : 0}`);
     if (!token) {
-      alert('⚠️ [Диагностика] Шаг 6.1: Получен пустой токен, выход');
+      alert('⚠️ [Диагностика] Шаг 6.1: Токен пустой, выход');
       return;
     }
     
     currentFCMToken = token;
     
-    alert('🔍 [Диагностика] Шаг 7: Отправляем токен на бэкенд (saveUserToken)...');
+    alert('🔍 [Диагностика] Шаг 7: Отправляем токен в Firestore...');
     const saveToken = httpsCallable(functions, 'saveUserToken');
     await saveToken({ token });
     
-    alert('🔍 [Диагностика] Шаг 8: Токен сохранен! Обновляем статус колокольчика...');
+    alert('🔍 [Диагностика] Шаг 8: Токен сохранен! Обновляем кнопку...');
     updateNotifBtn();
-    alert('🎉 [Диагностика] Шаг 9: Всё готово! Колокольчик должен стать цветным.');
+    alert('🎉 [Диагностика] Успешно! Колокольчик должен стать активным.');
   } catch (error) {
     alert(`❌ КРИТИЧЕСКАЯ ОШИБКА: ${error.message || error}`);
   }
@@ -876,5 +869,3 @@ if (notifBtn) {
   });
   updateNotifBtn();
 }
-
---- END OF FILE Paste June 24, 2026 - 2:01PM ---

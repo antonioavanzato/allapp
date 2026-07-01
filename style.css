@@ -1,62 +1,62 @@
 /* ──────────────────────────────────────────────
-   НАШ ДОМ — сдержанный японский минимализм
-   Васи-бумага · тушь суми · тонкие линии · 朱 акцент
+   НАШ ДОМ — светлый стиль в духе apple.com
+   Белые поверхности · SF Pro · синий акцент · мягкие тени
    ────────────────────────────────────────────── */
 :root {
-  --paper: #f4f1ea;
-  --paper-deep: #ece8df;
-  --surface: #fbfaf6;
-  --card-bg: #fbfaf6;
-  --card-bg-solid: #fcfbf8;
-  --bg-color: #f4f1ea;
-  --bg-gradient: #f4f1ea;
+  --paper: #ffffff;
+  --paper-deep: #f5f5f7;
+  --surface: #ffffff;
+  --card-bg: #ffffff;
+  --card-bg-solid: #ffffff;
+  --bg-color: #f5f5f7;
+  --bg-gradient: #f5f5f7;
 
-  --text-main: #2c2a26;
-  --text-muted: #8a857a;
+  --text-main: #1d1d1f;
+  --text-muted: #86868b;
 
-  --accent: #b14a36;
-  --accent-gradient: #b14a36;
-  --color-delete: #a8413a;
-  --color-complete: #5d6b4f;
+  --accent: #0071e3;
+  --accent-gradient: linear-gradient(135deg, #0077ed, #0071e3);
+  --color-delete: #ff3b30;
+  --color-complete: #34c759;
 
-  --border: rgba(44, 42, 38, 0.10);
-  --hair-strong: rgba(44, 42, 38, 0.18);
-  --glass-border: rgba(44, 42, 38, 0.08);
+  --border: rgba(0, 0, 0, 0.08);
+  --hair-strong: rgba(0, 0, 0, 0.12);
+  --glass-border: rgba(0, 0, 0, 0.06);
 
-  --shadow-sm: 0 1px 2px rgba(44, 42, 38, 0.03);
-  --shadow-md: 0 2px 12px rgba(44, 42, 38, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.08);
 
-  --radius: 10px;
-  --radius-sm: 7px;
+  --radius: 18px;
+  --radius-sm: 12px;
 
-  --font-jp: "Jost", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mincho: "Jost", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-jp: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-mincho: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
 
   --transition-spring: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Приглушённые «земляные» акценты по разделам */
+/* Акценты по разделам — палитра системных цветов Apple */
 .content[data-tab="shopping"] #quick-products-container,
 .content[data-tab="shopping"] .input-group,
 .content[data-tab="shopping"] .list-section {
-  --accent: #b14a36;          /* 朱 vermilion */
-  --accent-gradient: #b14a36;
+  --accent: #0071e3;          /* Apple blue */
+  --accent-gradient: linear-gradient(135deg, #0077ed, #0071e3);
 }
 
 .content[data-tab="tasks"] .input-group,
 .content[data-tab="tasks"] .list-section {
-  --accent: #5a6b4f;          /* 松葉 pine */
-  --accent-gradient: #5a6b4f;
+  --accent: #34c759;          /* Apple green */
+  --accent-gradient: linear-gradient(135deg, #30d158, #34c759);
 }
 
 #coffee-section {
-  --accent: #8a5a3c;          /* 茶 chestnut */
-  --accent-gradient: #8a5a3c;
+  --accent: #a2845e;          /* Apple brown */
+  --accent-gradient: linear-gradient(135deg, #b08968, #a2845e);
 }
 
 #tasks-section {
-  --accent: #4a5a6b;          /* 藍 indigo */
-  --accent-gradient: #4a5a6b;
+  --accent: #5856d6;          /* Apple indigo */
+  --accent-gradient: linear-gradient(135deg, #6f6ce0, #5856d6);
 }
 
 .material-symbols-outlined {
@@ -76,22 +76,22 @@
 }
 
 body {
-  font-family: "Jost", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
   background-color: var(--paper-deep);
   color: var(--text-main);
   height: 100dvh;
   overflow: hidden;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   display: flex;
   justify-content: center;
   align-items: flex-start;
 }
 
-/* Глобальный отклик нажатия на кнопки */
+/* Отклик нажатия на всех кнопках */
 button {
   transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
-              background-color 0.2s ease, color 0.2s ease;
+              background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
 }
 button:active {
   transform: scale(0.97);
@@ -102,11 +102,11 @@ button:active {
   max-width: 480px;
   height: 100dvh;
   margin: 0 auto;
-  background: var(--paper);
+  background: var(--paper-deep);
   position: relative;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 1px rgba(44, 42, 38, 0.2);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -128,6 +128,7 @@ button:active {
   justify-content: center;
   align-items: center;
   padding: 24px;
+  background: var(--paper-deep);
 }
 
 .auth-container {
@@ -143,18 +144,17 @@ button:active {
 }
 
 .auth-container h2 {
-  font-family: var(--font-mincho);
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   text-align: center;
+  color: var(--text-main);
 }
 
 .auth-subtitle {
   color: var(--text-muted);
   margin-bottom: 8px;
-  font-size: 13px;
-  letter-spacing: 0.04em;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -167,28 +167,29 @@ button:active {
   color: var(--text-main);
   font-size: 16px;
   outline: none;
-  transition: border-color 0.25s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .auth-container input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.12);
 }
 
 .primary-btn {
-  background: var(--accent);
+  background: var(--accent-gradient);
   color: #fff;
   border: none;
-  padding: 15px;
+  padding: 16px;
   border-radius: var(--radius-sm);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: 0.04em;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.25);
 }
 
 .primary-btn:active {
   transform: scale(0.98);
-  opacity: 0.9;
+  opacity: 0.92;
 }
 
 .error-text {
@@ -204,11 +205,10 @@ button:active {
   top: 0;
   left: 0;
   width: 100%;
-  background: #8a7a4f;
+  background: #ff9500;
   color: #fff;
   font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
+  font-weight: 600;
   text-align: center;
   padding: 8px 16px;
   z-index: 200;
@@ -225,9 +225,9 @@ button:active {
   padding: calc(env(safe-area-inset-top) + 14px) 22px 16px;
   position: sticky;
   top: 0;
-  background: rgba(244, 241, 234, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(245, 245, 247, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 10;
   display: flex;
   justify-content: space-between;
@@ -237,10 +237,10 @@ button:active {
 }
 
 h1 {
-  font-family: var(--font-mincho);
-  font-size: 21px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-main);
 }
 
 .title-wrap {
@@ -253,14 +253,14 @@ h1 {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #c4c0b5;
+  background: #c7c7cc;
   flex-shrink: 0;
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .sync-dot.synced {
   background: var(--color-complete);
-  box-shadow: 0 0 0 0 rgba(93, 107, 79, 0.45);
+  box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.45);
 }
 
 .sync-dot.syncing {
@@ -273,17 +273,17 @@ h1 {
 }
 
 @keyframes sync-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(93, 107, 79, 0.5); }
-  70%  { box-shadow: 0 0 0 7px rgba(93, 107, 79, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(93, 107, 79, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.5); }
+  70%  { box-shadow: 0 0 0 7px rgba(52, 199, 89, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); }
 }
 
 .app-version {
   text-align: center;
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: 11px;
+  letter-spacing: 0.04em;
   color: var(--text-muted);
-  opacity: 0.55;
+  opacity: 0.6;
   padding: 18px 0 6px;
 }
 
@@ -298,6 +298,7 @@ h1 {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
 }
 
 .qr-icon-btn img {
@@ -314,17 +315,16 @@ h1 {
 .text-btn {
   background: none;
   border: none;
-  color: var(--text-muted);
-  font-size: 13px;
+  color: var(--accent);
+  font-size: 14px;
   font-weight: 500;
-  letter-spacing: 0.03em;
   cursor: pointer;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
 }
 
 .text-btn:active {
-  color: var(--text-main);
+  opacity: 0.6;
 }
 
 /* ── Content ── */
@@ -334,7 +334,7 @@ h1 {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 120px;
@@ -358,10 +358,10 @@ h1 {
 
 .quick-title {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
 }
 
 .quick-arrow {
@@ -383,7 +383,7 @@ h1 {
   margin-top: 14px;
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
 }
 
 .quick-grid.collapsed {
@@ -393,8 +393,8 @@ h1 {
 }
 
 .quick-btn {
-  background: transparent;
-  border: 1px solid var(--hair-strong);
+  background: var(--paper-deep);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 8px 13px;
   font-size: 13px;
@@ -426,15 +426,17 @@ h1 {
   background: var(--surface);
   color: var(--text-main);
   outline: none;
-  transition: border-color 0.25s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 #item-input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.12);
 }
 
 #add-btn {
-  background: var(--accent);
+  background: var(--accent-gradient);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
@@ -445,11 +447,12 @@ h1 {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.25);
 }
 
 #add-btn:active {
   transform: scale(0.93);
-  opacity: 0.9;
+  opacity: 0.92;
 }
 
 /* ── List Section ── */
@@ -471,19 +474,18 @@ h1 {
 
 .list-section-title {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
 }
 
 .clear-completed-btn {
   font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
+  font-weight: 600;
   color: var(--color-delete);
-  background: transparent;
-  border: 1px solid rgba(168, 65, 58, 0.25);
+  background: rgba(255, 59, 48, 0.08);
+  border: none;
   border-radius: var(--radius-sm);
   padding: 6px 12px;
   cursor: pointer;
@@ -492,15 +494,14 @@ h1 {
 }
 
 .clear-completed-btn:active {
-  background: rgba(168, 65, 58, 0.08);
+  background: rgba(255, 59, 48, 0.16);
 }
 
 .empty-state {
   text-align: center;
   padding: 44px 20px;
   color: var(--text-muted);
-  font-size: 14px;
-  letter-spacing: 0.04em;
+  font-size: 15px;
 }
 
 /* ── Items List ── */
@@ -508,21 +509,17 @@ h1 {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  background: var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  gap: 10px;
 }
 
 li {
   position: relative;
   background: var(--card-bg-solid);
   overflow: hidden;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
-
-#items-list li:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
-#items-list li:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
-#items-list li:only-child { border-radius: var(--radius-sm); }
 
 .swipe-content {
   display: flex;
@@ -536,11 +533,11 @@ li {
 }
 
 li.swiping-right .swipe-content {
-  background-color: rgba(93, 107, 79, 0.07);
+  background-color: rgba(52, 199, 89, 0.08);
 }
 
 li.swiping-left .swipe-content {
-  background-color: rgba(168, 65, 58, 0.05);
+  background-color: rgba(255, 59, 48, 0.06);
 }
 
 .item-text {
@@ -562,48 +559,10 @@ li.swiping-left .swipe-content {
 .user-name {
   color: var(--text-muted);
   font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-weight: 600;
   background: var(--paper-deep);
   padding: 3px 8px;
-  border-radius: 4px;
-}
-
-.item-qty {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  margin-left: 4px;
-}
-
-.qty-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--hair-strong);
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 17px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.qty-btn:active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-  transform: scale(0.94);
-}
-
-.qty-value {
-  min-width: 18px;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: 8px;
 }
 
 .item-edit {
@@ -650,8 +609,7 @@ li.swiping-left .swipe-content {
   justify-content: space-between;
   align-items: center;
   color: #fff;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-weight: 600;
   font-size: 13px;
 }
 
@@ -685,16 +643,16 @@ li.swiping-left .swipe-content {
   transform: translateX(-50%);
   width: calc(100% - 32px);
   max-width: 448px;
-  background: rgba(251, 250, 246, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   display: flex;
   justify-content: space-around;
   padding: 10px 8px;
   z-index: 100;
-  box-shadow: 0 4px 20px rgba(44, 42, 38, 0.07);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
 .nav-item {
@@ -708,8 +666,7 @@ li.swiping-left .swipe-content {
   color: var(--text-muted);
   cursor: pointer;
   font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-weight: 600;
   gap: 5px;
   transition: color 0.25s ease;
 }
@@ -721,9 +678,9 @@ li.swiping-left .swipe-content {
   transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.nav-item[data-tab="shopping"].active { color: #b14a36; }
-.nav-item[data-tab="coffee"].active { color: #8a5a3c; }
-.nav-item[data-tab="tasks"].active { color: #5a6b4f; }
+.nav-item[data-tab="shopping"].active { color: #0071e3; }
+.nav-item[data-tab="coffee"].active { color: #a2845e; }
+.nav-item[data-tab="tasks"].active { color: #34c759; }
 
 .nav-item.active .nav-icon {
   transform: translateY(-2px) scale(1.08);
@@ -735,17 +692,16 @@ li.swiping-left .swipe-content {
   bottom: 110px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(44, 42, 38, 0.94);
-  color: #f4f1ea;
+  background: rgba(29, 29, 31, 0.92);
+  color: #fff;
   padding: 12px 22px;
   border-radius: var(--radius-sm);
   font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-weight: 600;
   z-index: 1000;
   animation: toastFade 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   white-space: nowrap;
-  box-shadow: 0 6px 20px rgba(44, 42, 38, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes toastFade {
@@ -768,13 +724,12 @@ li.swiping-left .swipe-content {
   align-items: center;
   gap: 14px;
   padding: 10px 12px 10px 18px;
-  background: rgba(44, 42, 38, 0.95);
+  background: rgba(29, 29, 31, 0.95);
   border-radius: var(--radius);
-  box-shadow: 0 6px 24px rgba(44, 42, 38, 0.22);
-  color: #f4f1ea;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  color: #fff;
   font-size: 14px;
   font-weight: 500;
-  letter-spacing: 0.02em;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -794,7 +749,6 @@ li.swiping-left .swipe-content {
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.03em;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -826,11 +780,10 @@ li.swiping-left .swipe-content {
   align-items: center;
   cursor: pointer;
   list-style: none;
-  font-family: var(--font-jp);
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-size: 17px;
+  font-weight: 600;
   color: var(--text-main);
+  letter-spacing: -0.02em;
 }
 
 .coffee-summary::-webkit-details-marker {
@@ -864,11 +817,11 @@ details[open] .coffee-summary-arrow {
 }
 
 .coffee-title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
 }
 
 .coffee-input {
@@ -880,11 +833,12 @@ details[open] .coffee-summary-arrow {
   background: #fff;
   color: var(--text-main);
   outline: none;
-  transition: border-color 0.25s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .coffee-input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
 }
 
 .coffee-row {
@@ -908,21 +862,21 @@ details[open] .coffee-summary-arrow {
 }
 
 .coffee-save-btn {
-  background: var(--accent);
+  background: var(--accent-gradient);
   color: #fff;
   border: none;
   padding: 15px;
   border-radius: var(--radius-sm);
   font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.04em;
   cursor: pointer;
   margin-top: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
 .coffee-save-btn:active {
   transform: scale(0.98);
-  opacity: 0.9;
+  opacity: 0.92;
 }
 
 .coffee-list {
@@ -945,6 +899,7 @@ details[open] .coffee-summary-arrow {
   border-radius: var(--radius-sm);
   padding: 16px;
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 .coffee-recipe-header {
@@ -955,10 +910,8 @@ details[open] .coffee-summary-arrow {
 }
 
 .coffee-recipe-name {
-  font-family: var(--font-jp);
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-size: 17px;
+  font-weight: 600;
   color: var(--accent);
   flex: 1;
   padding-right: 12px;
@@ -973,9 +926,9 @@ details[open] .coffee-summary-arrow {
 }
 
 .coffee-recipe-rating {
-  color: #c08a3e;
-  font-size: 14px;
-  letter-spacing: 3px;
+  color: #ff9500;
+  font-size: 15px;
+  letter-spacing: 2px;
   margin-bottom: 8px;
 }
 
@@ -1005,7 +958,6 @@ details[open] .coffee-summary-arrow {
   font-size: 13px;
   color: var(--text-muted);
   font-weight: 500;
-  letter-spacing: 0.03em;
 }
 
 .coffee-rating {
@@ -1018,7 +970,7 @@ details[open] .coffee-summary-arrow {
   border: none;
   font-size: 25px;
   line-height: 1;
-  color: #c08a3e;
+  color: #ff9500;
   cursor: pointer;
   padding: 2px;
 }
@@ -1041,10 +993,10 @@ details[open] .coffee-summary-arrow {
 
 .param-label {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
 }
 
 .param-value {
@@ -1069,7 +1021,7 @@ details[open] .coffee-summary-arrow {
 }
 
 .coffee-recipe-delete:active {
-  background: rgba(168, 65, 58, 0.1);
+  background: rgba(255, 59, 48, 0.1);
   color: var(--color-delete);
   transform: scale(0.92);
 }
@@ -1079,13 +1031,13 @@ details[open] .coffee-summary-arrow {
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(44, 42, 38, 0.45);
+  background: rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .qr-modal-content {
@@ -1095,7 +1047,7 @@ details[open] .coffee-summary-arrow {
   max-width: 88%;
   text-align: center;
   position: relative;
-  box-shadow: 0 12px 40px rgba(44, 42, 38, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
 }
 
@@ -1154,53 +1106,67 @@ details[open] .coffee-summary-arrow {
   transform: scale(0.9);
 }
 
-/* ── Dark Mode (墨 sumi night) ── */
+/* ── Dark Mode (следует системным настройкам iPhone) ── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #1a1916;
-    --paper-deep: #211f1b;
-    --surface: #211f1b;
-    --card-bg: #211f1b;
-    --card-bg-solid: #25231f;
-    --bg-color: #1a1916;
-    --bg-gradient: #1a1916;
+    --paper: #1c1c1e;
+    --paper-deep: #000000;
+    --surface: #1c1c1e;
+    --card-bg: #1c1c1e;
+    --card-bg-solid: #2c2c2e;
+    --bg-color: #000000;
+    --bg-gradient: #000000;
 
-    --text-main: #ece8df;
-    --text-muted: #908b7f;
+    --text-main: #f5f5f7;
+    --text-muted: #98989d;
 
-    --accent: #c97a5f;
-    --accent-gradient: #c97a5f;
-    --color-complete: #8a9a76;
-    --color-delete: #c66a5e;
+    --accent: #0a84ff;
+    --accent-gradient: linear-gradient(135deg, #409cff, #0a84ff);
+    --color-complete: #30d158;
+    --color-delete: #ff453a;
 
-    --border: rgba(236, 232, 223, 0.10);
-    --hair-strong: rgba(236, 232, 223, 0.16);
-    --glass-border: rgba(236, 232, 223, 0.08);
+    --border: rgba(255, 255, 255, 0.10);
+    --hair-strong: rgba(255, 255, 255, 0.16);
+    --glass-border: rgba(255, 255, 255, 0.08);
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
-    --shadow-md: 0 2px 14px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 12px 40px rgba(0, 0, 0, 0.5);
   }
 
-  body { background-color: #121110; }
+  body { background-color: #000000; }
 
   .header {
-    background: rgba(26, 25, 22, 0.88);
+    background: rgba(0, 0, 0, 0.8);
   }
 
   .bottom-nav {
-    background: rgba(33, 31, 27, 0.92);
+    background: rgba(28, 28, 30, 0.85);
   }
 
   .auth-container input,
   .coffee-input,
-  .item-edit-input {
-    background: #18170f;
-    background: rgba(0, 0, 0, 0.25);
+  .item-edit-input,
+  #item-input {
+    background: rgba(255, 255, 255, 0.06);
   }
 
-  .nav-item[data-tab="shopping"].active { color: #d98a6f; }
+  .quick-btn {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .coffee-age {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .user-name,
+  .coffee-recipe-notes,
+  .coffee-param {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .nav-item[data-tab="shopping"].active { color: #0a84ff; }
   .nav-item[data-tab="coffee"].active { color: #c39466; }
-  .nav-item[data-tab="tasks"].active { color: #8a9a76; }
+  .nav-item[data-tab="tasks"].active { color: #30d158; }
 }
 
 /* ── Mobile ── */
@@ -1230,66 +1196,4 @@ details[open] .coffee-summary-arrow {
   .bottom-nav {
     max-width: calc(100% - 32px);
   }
-}
-
-/* ──────────────────────────────────────────────
-   間 · 印 — японские акценты
-   ────────────────────────────────────────────── */
-
-/* Печать-ханko 済 («сделано») на выполненных пунктах */
-.item-text.completed::before {
-  content: "済";
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  border: 1.5px solid var(--color-delete);
-  border-radius: 4px;
-  color: var(--color-delete);
-  font-family: var(--font-mincho);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  transform: rotate(-7deg);
-  opacity: 0.8;
-}
-
-/* Бледный иероглиф-водяной знак в углу раздела */
-.list-section,
-.coffee-list {
-  position: relative;
-  overflow: hidden;
-}
-
-.list-section::after,
-.coffee-list::after {
-  position: absolute;
-  top: -14px;
-  right: -2px;
-  font-family: var(--font-mincho);
-  font-size: 88px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--accent);
-  opacity: 0.05;
-  pointer-events: none;
-  user-select: none;
-}
-
-.content[data-tab="shopping"] .list-section::after { content: "買"; }
-.content[data-tab="tasks"] .list-section::after { content: "事"; }
-.coffee-list::after { content: "茶"; }
-
-/* Заголовки разделов — японская гарнитура */
-.list-section-title,
-.quick-title,
-.coffee-title {
-  font-family: var(--font-jp);
-}
-
-.coffee-recipe-rating,
-.coffee-rating .star {
-  font-family: var(--font-mincho);
 }

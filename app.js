@@ -8,7 +8,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v24';
+const APP_VERSION = 'v25';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -907,3 +907,31 @@ if (notifBtn) {
   });
   updateNotifBtn();
 }
+
+// ── Скрытие нижней навигации при скролле вниз, появление при скролле вверх ──
+(() => {
+  const nav = document.querySelector('.bottom-nav');
+  const content = document.querySelector('.content');
+  if (!nav || !content) return;
+
+  let lastY = 0;
+  const THRESHOLD = 8; // игнорируем микродвижения
+
+  content.addEventListener('scroll', () => {
+    const y = content.scrollTop;
+    const maxY = content.scrollHeight - content.clientHeight;
+
+    // У края (верх/низ, включая резиновый оверскролл iOS) — всегда показываем
+    if (y <= 0 || y >= maxY) {
+      nav.classList.remove('nav-hidden');
+      lastY = Math.max(0, Math.min(y, maxY));
+      return;
+    }
+
+    const delta = y - lastY;
+    if (Math.abs(delta) < THRESHOLD) return;
+
+    nav.classList.toggle('nav-hidden', delta > 0);
+    lastY = y;
+  }, { passive: true });
+})();

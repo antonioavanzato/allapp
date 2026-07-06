@@ -8,7 +8,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
-const APP_VERSION = 'v25';
+const APP_VERSION = 'v26';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('app-version');
   if (el) el.textContent = `НАШ ДОМ · ${APP_VERSION}`;
@@ -240,6 +240,7 @@ let completedDocIds = [];
 let unsubscribe = null;
 let unsubscribeCoffee = null;
 let currentUser = null;
+const expandedRecipes = new Set(); // раскрытые рецепты переживают ресинк списка
 
 const userNames = {
   'antonioavanzato@gmail.com': 'Антон',
@@ -794,25 +795,42 @@ function renderCoffeeRecipe(id, data) {
 
   const ratingStr = data.rating ? '★'.repeat(data.rating) + '☆'.repeat(5 - data.rating) : '';
 
+  if (!expandedRecipes.has(id)) card.classList.add('collapsed');
+
   card.innerHTML = `
     <div class="coffee-recipe-header">
       <div class="coffee-recipe-name">${escapeHtml(data.name)}</div>
       <button class="coffee-recipe-delete" data-id="${id}">✕</button>
+      <span class="coffee-recipe-chevron">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
     </div>
-    ${ratingStr ? `<div class="coffee-recipe-rating">${ratingStr}</div>` : ''}
-    ${meta ? `<div class="coffee-recipe-meta">${meta}</div>` : ''}
-    ${params.length ? `
-      <div class="coffee-recipe-params">
-        ${params.map(p => `
-          <div class="coffee-param">
-            <span class="param-label">${p.label}</span>
-            <span class="param-value">${p.value}</span>
+    <div class="coffee-recipe-body">
+      <div class="coffee-recipe-body-inner">
+        ${ratingStr ? `<div class="coffee-recipe-rating">${ratingStr}</div>` : ''}
+        ${meta ? `<div class="coffee-recipe-meta">${meta}</div>` : ''}
+        ${params.length ? `
+          <div class="coffee-recipe-params">
+            ${params.map(p => `
+              <div class="coffee-param">
+                <span class="param-label">${p.label}</span>
+                <span class="param-value">${p.value}</span>
+              </div>
+            `).join('')}
           </div>
-        `).join('')}
+        ` : ''}
+        ${data.notes ? `<div class="coffee-recipe-notes">${escapeHtml(data.notes)}</div>` : ''}
       </div>
-    ` : ''}
-    ${data.notes ? `<div class="coffee-recipe-notes">${escapeHtml(data.notes)}</div>` : ''}
+    </div>
   `;
+
+  card.querySelector('.coffee-recipe-header').addEventListener('click', () => {
+    const collapsed = card.classList.toggle('collapsed');
+    if (collapsed) expandedRecipes.delete(id);
+    else expandedRecipes.add(id);
+  });
 
   card.querySelector('.coffee-recipe-delete').addEventListener('click', async (e) => {
     e.stopPropagation();

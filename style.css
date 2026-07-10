@@ -672,7 +672,7 @@ li.swiping-left .swipe-content {
 /* ── Bottom Navigation — пилюля из матового стекла (iOS 26) ── */
 .bottom-nav {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 14px);
+  bottom: calc(env(safe-area-inset-bottom) + 6px);
   left: 50%;
   transform: translateX(-50%);
   width: auto;
@@ -684,7 +684,7 @@ li.swiping-left .swipe-content {
   display: flex;
   justify-content: center;
   gap: 4px;
-  padding: 6px;
+  padding: 6px 10px;
   z-index: 100;
   box-shadow:
     0 12px 32px rgba(0, 0, 0, 0.45),

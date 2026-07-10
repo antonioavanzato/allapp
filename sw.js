@@ -1,4 +1,4 @@
-const CACHE_NAME = 'allapp-cache-v26';
+const CACHE_NAME = 'allapp-cache-v27';
 const urlsToCache = [
   './',
   './index.html',

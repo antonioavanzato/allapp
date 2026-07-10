@@ -672,7 +672,7 @@ li.swiping-left .swipe-content {
 /* ── Bottom Navigation — пилюля из матового стекла (iOS 26) ── */
 .bottom-nav {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 6px);
+  bottom: calc(env(safe-area-inset-bottom) + 2px);
   left: 50%;
   transform: translateX(-50%);
   width: auto;
@@ -1112,6 +1112,26 @@ details[open] .coffee-summary-arrow {
   font-weight: 600;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
+}
+
+.coffee-recipe-edit {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.coffee-recipe-edit:active {
+  background: rgba(64, 156, 255, 0.14);
+  color: #409cff;
+  transform: scale(0.92);
 }
 
 .coffee-recipe-delete {

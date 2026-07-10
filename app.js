@@ -711,7 +711,37 @@ function updateCoffeeAge() {
   coffeeAgeSpan.textContent = diffDays >= 0 ? `${diffDays} дн.` : '— дней';
 }
 
+let editingCoffeeId = null;
+
+function setCoffeeFormMode(editing) {
+  const summary = document.querySelector('#coffee-form-details .coffee-summary span');
+  if (summary) summary.textContent = editing ? 'Редактирование рецепта' : 'Новый рецепт';
+  if (coffeeSaveBtn) coffeeSaveBtn.textContent = editing ? 'Сохранить изменения' : 'Сохранить рецепт';
+}
+
+function startEditCoffeeRecipe(id, data) {
+  editingCoffeeId = id;
+  coffeeName.value = data.name || '';
+  coffeeProcessing.value = data.processing || '';
+  coffeeRoastDate.value = data.roastDate || '';
+  updateCoffeeAge();
+  coffeeDose.value = data.dose ?? '';
+  coffeeGrind.value = data.grind ?? '';
+  coffeeTemp.value = data.temp ?? '';
+  coffeeWater.value = data.totalWater ?? '';
+  if (coffeeNotes) coffeeNotes.value = data.notes || '';
+  setCoffeeRating(data.rating || 0);
+  setCoffeeFormMode(true);
+  const details = document.getElementById('coffee-form-details');
+  if (details) {
+    details.setAttribute('open', '');
+    details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 function resetCoffeeForm() {
+  editingCoffeeId = null;
+  setCoffeeFormMode(false);
   const details = document.getElementById('coffee-form-details');
   if (details) details.removeAttribute('open');
   coffeeName.value = '';
@@ -739,19 +769,26 @@ if (coffeeSaveBtn) coffeeSaveBtn.addEventListener('click', async () => {
     temp: coffeeTemp.value ? parseFloat(coffeeTemp.value) : null,
     totalWater: coffeeWater.value ? parseInt(coffeeWater.value) : null,
     notes: coffeeNotes && coffeeNotes.value.trim() ? coffeeNotes.value.trim() : null,
-    rating: coffeeRating || null,
-    createdBy: currentUser.email,
-    createdAt: serverTimestamp()
+    rating: coffeeRating || null
   };
   try {
-    await addDoc(collection(db, 'family', 'shared', 'coffee'), recipe);
-    haptic();
-    showToast('Рецепт сохранён');
-    resetCoffeeForm();
+    if (editingCoffeeId) {
+      await updateDoc(doc(db, 'family', 'shared', 'coffee', editingCoffeeId), recipe);
+      haptic();
+      showToast('Рецепт обновлён');
+      resetCoffeeForm();
+    } else {
+      recipe.createdBy = currentUser.email;
+      recipe.createdAt = serverTimestamp();
+      await addDoc(collection(db, 'family', 'shared', 'coffee'), recipe);
+      haptic();
+      showToast('Рецепт сохранён');
+      resetCoffeeForm();
 
-    // === ОТПРАВЛЯЕМ ПУШ СЕМЬЕ ===
-    const senderName = getUserDisplayName(currentUser.email);
-    notifyFamily(`${senderName} добавил рецепт кофе:`, `"${name}"`);
+      // === ОТПРАВЛЯЕМ ПУШ СЕМЬЕ ===
+      const senderName = getUserDisplayName(currentUser.email);
+      notifyFamily(`${senderName} добавил рецепт кофе:`, `"${name}"`);
+    }
   } catch (error) {
     console.error('Ошибка:', error);
     showToast('Ошибка', 'error');
@@ -800,6 +837,11 @@ function renderCoffeeRecipe(id, data) {
   card.innerHTML = `
     <div class="coffee-recipe-header">
       <div class="coffee-recipe-name">${escapeHtml(data.name)}</div>
+      <button class="coffee-recipe-edit" data-id="${id}">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M11.3 2.1l2.6 2.6L5.5 13.1l-3.2.6.6-3.2 8.4-8.4z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <button class="coffee-recipe-delete" data-id="${id}">✕</button>
       <span class="coffee-recipe-chevron">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -830,6 +872,11 @@ function renderCoffeeRecipe(id, data) {
     const collapsed = card.classList.toggle('collapsed');
     if (collapsed) expandedRecipes.delete(id);
     else expandedRecipes.add(id);
+  });
+
+  card.querySelector('.coffee-recipe-edit').addEventListener('click', (e) => {
+    e.stopPropagation();
+    startEditCoffeeRecipe(id, data);
   });
 
   card.querySelector('.coffee-recipe-delete').addEventListener('click', async (e) => {
